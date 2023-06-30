@@ -1,5 +1,5 @@
 # Network R01 Functional Alignment Analyses
-## Authors: Christopher Iyer, Sunjae Shim
+## Authors: Chris Iyer, Sunjae Shim
 Poldrack Lab, Stanford University
 
 This repo will contain code for the following analyses run on our dense neuroimaging Network R01 project data:
