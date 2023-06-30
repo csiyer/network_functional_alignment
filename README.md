@@ -1,6 +1,6 @@
 # Network R01 Functional Alignment Analyses
-## Authors: Christopher Iyer, Sunjae Shim
-## Poldrack Lab, Stanford University
+Authors: Christopher Iyer, Sunjae Shim
+Poldrack Lab, Stanford University
 
 This repo will contain code for the following analyses run on our dense neuroimaging Network R01 project data:
 - Deriving connectivity matrices for each rest session (each subject undergoes 10-12 4-min rest sessions)
