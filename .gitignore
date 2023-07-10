@@ -1,4 +1,0 @@
-# ignore all the following files from git
-
-utils/__pycache__/*
-data/*
