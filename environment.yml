@@ -1,4 +1,4 @@
-name: network_fa
+name: lab
 channels:
   - defaults
 dependencies:
@@ -82,6 +82,7 @@ dependencies:
       - keyring==23.13.1
       - keyrings-alt==4.2.0
       - kiwisolver==1.4.4
+      - logger==1.4
       - looseversion==1.1.2
       - lxml==4.9.2
       - markupsafe==2.1.2
@@ -89,6 +90,7 @@ dependencies:
       - matplotlib-inline==0.1.6
       - mistune==2.0.5
       - more-itertools==9.1.0
+      - mpi4py==3.1.4
       - msgpack==1.0.5
       - nbclassic==1.0.0
       - nbclient==0.7.4
@@ -162,4 +164,4 @@ dependencies:
       - websocket-client==1.5.1
       - widgetsnbextension==4.0.7
       - zipp==3.15.0
-prefix: C:\Users\ciyer\miniconda3\envs\network_fa
+prefix: C:\Users\ciyer\miniconda3\envs\lab
