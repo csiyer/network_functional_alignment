@@ -1,4 +1,5 @@
-""" This script calculates functional connectivity matrices for each session/subject from rest data.
+""" 
+This script calculates functional connectivity matrices for each session/subject from rest data.
 
 Currently, this is implemented with parcels as our connectivity targets, i.e. the connectivity
 matrices are (n_voxels x n_parcels).
@@ -7,8 +8,8 @@ It is also possible to implement this voxel-to-voxel (chose not to do this becau
 computational demands and potential functional meaninglessness of voxel correlations) and with
 searchlight spheres as our connectivity targets (TO-DO: implement this).
 
-These connectomes are then passed to 2_reliability.py to be assessed for within-subject reliability.
-If they look good, we will average or concatenate them and then derive SRMs from them in 3_srm.py.
+These connectomes are then passed to reliability.py to be assessed for within-subject reliability.
+If they look good, we will average or concatenate them and then derive SRMs from them in srm.py.
 
 Author: Chris Iyer
 Updated: 7/20/2023
@@ -22,19 +23,21 @@ from nilearn.connectome import ConnectivityMeasure
 from sklearn.covariance import EmpiricalCovariance
 from scipy.stats import pearsonr
 from datetime import date
+from math import tanh
 
 def load_data(FILE_PATHS=[], 
             strategy = 'parcel', 
             schaefer_n_rois=400, 
             sphere_radius=8, 
             sphere_spacing=6):
-    """This function loads data in 3 different ways:
-        1. (NOT EFFICIENT) Strategy = voxel: extracts direct voxel timeseries
-        2. Strategy = parcel: extracts parcel timeseries from schaefer 2018 atlas with a given # of ROIs
-        3. (NOT IMPLEMENTED) Strategy = searchlight: extracts timeseries of spheres of a given radius and spacing
+    """
+    This function loads data in 3 different ways:
+    1. (NOT EFFICIENT) Strategy = voxel: extracts direct voxel timeseries
+    2. Strategy = parcel: extracts parcel timeseries from schaefer 2018 atlas with a given # of ROIs
+    3. (NOT IMPLEMENTED) Strategy = searchlight: extracts timeseries of spheres of a given radius and spacing
 
-        NOTE: the masker.fit_transform functions return an array of the shape (n_TRs x n_voxels)
-        """
+    NOTE: the masker.fit_transform functions return an array of the shape (n_TRs x n_voxels)
+    """
 
     if FILE_PATHS == []:
         FILE_PATHS = glob.glob('data/rest/*.nii.gz') # all rest data by default
@@ -77,33 +80,39 @@ def load_data(FILE_PATHS=[],
     return masker.fit_transform(FILE_PATHS)
 
 def compute_fc_voxel(voxel_timeseries, cov_estimator=EmpiricalCovariance()):
-    """ Full voxel-to-voxel connectivity/correlation matrix
-        If passed the parcel timeseries, this will compute a parcel-to-parcel matrix.
-        NOTES:
-            - This will take forever with the current implementation -- *replace with FCMA toolbox?*
-            - Default nilearn covariance estimator is LedoitWolf, replacing here with EmpiricalCovariance() for pearson
+    """ 
+    Full voxel-to-voxel connectivity/correlation matrix
+    If passed the parcel timeseries, this will compute a parcel-to-parcel matrix.
+    NOTES:
+        - This will take forever with the current implementation -- *replace with FCMA toolbox?*
+        - Default nilearn covariance estimator is LedoitWolf, replacing here with EmpiricalCovariance() for pearson
     """
     correlation_measure = ConnectivityMeasure(kind="correlation", cov_estimator=cov_estimator)
     return correlation_measure.fit_transform(voxel_timeseries)
 
-def correlate_rows(mat1, mat2):
-    """ Helper function for below
-        Returns a matrix with the Pearson r correlation of each column (voxel) of mat1 with each column (parcel/target) of mat2
+def correlate_rows(mat1, mat2, zscore = False):
+    """ 
+    Helper function for below
+    Returns a matrix with the Pearson r correlation of each column (voxel) of mat1 with each column (parcel/target) of mat2
     """
     correlation_matrix = np.empty((mat1.shape[1], mat2.shape[1]))
     for i in range(mat1.shape[0]):
         for j in range(mat2.shape[0]):
             correlation_matrix[i, j] = pearsonr(mat1[:, i], mat2[:, j])[0]
+            if zscore:
+                # fisher transformation
+                correlation_matrix[i,j] = tanh(correlation_matrix[i,j])
     return correlation_matrix
 
 def compute_fc_target(voxel_timeseries, target_timeseries):
-    """ This will take each column in the voxel timeseries (across all the TRs/rows) 
-        and correlate it with each column in the target timeseries.
-        Connectivity targets could be the parcel timeseries, or a searchlight timeseries
-        
-        NOTE: The connectivity target in which a given voxel resides is not excluded yet -- should it be?
+    """ 
+    This will take each column in the voxel timeseries (across all the TRs/rows) 
+    and correlate it with each column in the target timeseries.
+    Connectivity targets could be the parcel timeseries, or a searchlight timeseries
+    
+    NOTE: The connectivity target in which a given voxel resides is not excluded yet -- should it be?
     """
-    return [correlate_rows(voxel_timeseries[i], target_timeseries[i]) for i in range(len(voxel_timeseries))]
+    return [correlate_rows(voxel_timeseries[i], target_timeseries[i], zscore = True) for i in range(len(voxel_timeseries))]
 
 # nilearn.plotting.plot_connectome?
 
