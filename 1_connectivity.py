@@ -90,7 +90,7 @@ def compute_fc_voxel(voxel_timeseries, cov_estimator=EmpiricalCovariance()):
     correlation_measure = ConnectivityMeasure(kind="correlation", cov_estimator=cov_estimator)
     return correlation_measure.fit_transform(voxel_timeseries)
 
-def correlate_rows(mat1, mat2, zscore = False):
+def correlate_rows(mat1, mat2, zscore=False):
     """ 
     Helper function for below
     Returns a matrix with the Pearson r correlation of each column (voxel) of mat1 with each column (parcel/target) of mat2
@@ -104,7 +104,7 @@ def correlate_rows(mat1, mat2, zscore = False):
                 correlation_matrix[i,j] = tanh(correlation_matrix[i,j])
     return correlation_matrix
 
-def compute_fc_target(voxel_timeseries, target_timeseries):
+def compute_fc_target(voxel_timeseries, target_timeseries, zscore=True):
     """ 
     This will take each column in the voxel timeseries (across all the TRs/rows) 
     and correlate it with each column in the target timeseries.
@@ -112,7 +112,7 @@ def compute_fc_target(voxel_timeseries, target_timeseries):
     
     NOTE: The connectivity target in which a given voxel resides is not excluded yet -- should it be?
     """
-    return [correlate_rows(voxel_timeseries[i], target_timeseries[i], zscore = True) for i in range(len(voxel_timeseries))]
+    return [correlate_rows(voxel_timeseries[i], target_timeseries[i], zscore) for i in range(len(voxel_timeseries))]
 
 # nilearn.plotting.plot_connectome?
 
@@ -127,5 +127,5 @@ def write_connectomes(connectomes):
 
 if __name__ == "__main__":
     brain_data = load_data(strategy='parcel')
-    connectomes = compute_fc_target(brain_data)
+    connectomes = compute_fc_target(brain_data, zscore = True)
     write_connectomes(connectomes)
