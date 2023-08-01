@@ -126,6 +126,7 @@ def write_connectomes(connectomes):
     
 
 if __name__ == "__main__":
-    brain_data = load_data(strategy='parcel')
-    connectomes = compute_fc_target(brain_data, zscore = True)
+    voxel_data = load_data(strategy='voxel')
+    parcel_data = load_data(strategy='parcel')
+    connectomes = compute_fc_target(voxel_data, parcel_data, zscore = True)
     write_connectomes(connectomes)

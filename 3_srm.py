@@ -18,6 +18,9 @@ Author: Chris Iyer
 Updated: 7/20/23
 """
 
+##### TO-DO: implement parcellation + derive and concatenate separate SRMs on each parcel
+
+
 import glob
 import numpy as np
 from scipy import stats
@@ -58,9 +61,9 @@ def save_srm_outputs(shared_model, data_dict):
     sub_nums = list(data_dict.keys()) # in same order as data_list and therefore as srm outputs
     for sub_i in range(len(shared_model.w_)):
         shared_model.w_[sub_i].tofile(f'{outpath + sub_nums[sub_i]}_srm_transform') # save transformation matrices (shape will be n_voxels x n_features)
-        
+
 
 if __name__ == "__main__":
     data_dict, data_list = load_fake_connectomes()
     shared_model = fit_srm(data_list, n_features=2)
-    save_srm_outputs(shared_model, data_dict)
+    # save_srm_outputs(shared_model, data_dict)
