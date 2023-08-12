@@ -15,55 +15,72 @@ transformation matrix per subject, which is saved and used in task_decoding.py
 NOTE: the SRM derivation code is copied from the BrianIAK library (https://brainiak.org/)
 
 Author: Chris Iyer
-Updated: 7/20/23
+Updated: 8/11/23
 """
-
-##### TO-DO: implement parcellation + derive and concatenate separate SRMs on each parcel
-
 
 import glob
 import numpy as np
-from scipy import stats
 from utils.brainiak import srm
+from joblib import Parallel, delayed
 
-def load_connectomes():
+def load_avg_connectomes():
+    """load subject-average connectomes (voxels x parcels) computed in 2_reliability.ipynb"""
     data_dict = {}
-    sub_nums = np.unique([f[f.find('sub'):f.find('sub')+7] for f in glob.glob('output/connectomes/*avg*')])
-    for sub in sub_nums:
-        data_dict[sub] =  np.load(glob.glob(f'output/connectomes/*{sub}_avg*')[0]) # these connectomes are of the shape (n_voxels x n_connectivity_targets)
+    files = glob.glob('output/connectomes/*avg*')
+    for sub in np.unique([f[f.find('sub'):f.find('sub')+7] for f in files]):
+        data_dict[sub] = np.load(glob.glob(f'output/connectomes/{sub}_connectome_avg.npy')[0])
+    data_list = list(data_dict.values())
+    return data_dict, data_list
+
+def load_parcel_map():
+    """Schaefer 2018 parcel map that corresponds exactly the voxel dimension of the connectomes (Saved in 1_connectivity.py)"""
+    return np.load('outputs/parcel_map_flat.npy')
+
+
+def compute_srms(data_list, parcel_map, n_features=50, n_iter=20, save=False):
+    """
+    This function uses BrainIAK's Shared Response Modeling function to compute parcel-wise SRMs (one per parcel, as an anatomical constraint).
+    We employ joblib's Parallel and delayed functions to speed up the process.
     
-    data_list = list(data_dict.values()) # also create unlabeled list
-    return data_dict, data_list
+    Inputs:
+        - data_list: each element is one subject's average connectome to derive the SRM from
+        - n_features: features in the shared model (default 50, implement grid search later?)
+        - n_iter: iterations for SRM. 20 is generally enough to converge
+        - save: save the outputs to 'outputs/srm'
 
-def load_fake_connectomes():
-    sub_nums = ['sub-s01', 'sub-s02', 'sub-s03', 'sub-s04', 'sub-s05']
-    data_dict = {}
-    for sub in sub_nums:
-        data_dict[sub] = np.random.rand(100, 10) # 100 voxels x 10 parcel targets
+    Outputs:
+        - subject_transforms: each element is one subject's transformation from voxel space to shared space (n_voxels x n_features)
+        - parcelwise_shared_responses: each element is one parcel's 'shared response' in the common model. The meaning of this
+            is less clear in the case of connectivity SRMs than traditional response SRMs, so we likely will ignore it--but saving it nonetheless.
+    """
+    def single_parcel_srm(data_list, parcel_map, parcel_label):
+        parcel_idx = np.where(parcel_map == parcel_label)
+        data_parcel = [d[parcel_idx] for d in data_list]
+        shared_model = srm.SRM(n_iter=20, features=50)
+        shared_model.fit(data_parcel)
+        return shared_model.s_, shared_model.w_, parcel_idx
 
-    data_list = list(data_dict.values()) # also create unlabeled lists
-    return data_dict, data_list
+    srm_outputs = Parallel(n_jobs=-1)(
+        delayed(single_parcel_srm)(data_list, parcel_map, parcel_label) for parcel_label in np.sort(np.unique(parcel_map))
+    )
 
+    parcelwise_shared_responses = [s[0] for s in srm_outputs] # concatenate all the parcelwise shared space responses/connectivities
+    subject_transforms = [np.zeros((data_list[0].shape[0], n_features)) for i in range(len(data_list))] # empty initalize
+    
+    for _, w_, parcel_idx in srm_outputs: # concatenate transforms into subject-wise all-voxel transformation matrices 
+        for i,sub in enumerate(subject_transforms):
+            sub[parcel_idx,:] = w_[i]
+    # i know there's a better way to do that ^ with more linear algebra. urgh
 
-def fit_srm(data, n_features=50, n_iter=20):
-    shared_model = srm.SRM(n_iter, n_features)
-    print('Fitting SRM, may take a minute ...')
-    shared_model.fit(data)
-    print('SRM has been fit')
-    return shared_model
-
-
-def save_srm_outputs(shared_model, data_dict):
-    outpath = 'outputs/srm_transforms/'
-    shared_model.save(outpath + 'srm_saved') # can reload with srm.load
-    shared_model.s_.tofile(outpath + 'srm_shared_space') # save shared space (shape will be n_features x n_connectivity_targets)
-
-    sub_nums = list(data_dict.keys()) # in same order as data_list and therefore as srm outputs
-    for sub_i in range(len(shared_model.w_)):
-        shared_model.w_[sub_i].tofile(f'{outpath + sub_nums[sub_i]}_srm_transform') # save transformation matrices (shape will be n_voxels x n_features)
+    if save:
+        np.save('outputs/srm/parcelwise_shared_responses.npy', parcelwise_shared_responses)
+        for i,sub in enumerate(subject_transforms):
+            np.save(f'outputs/srm/{list(data_dict.keys())[i]}_srm_transform.npy', sub)
+    
+    return subject_transforms, parcelwise_shared_responses 
 
 
 if __name__ == "__main__":
-    data_dict, data_list = load_fake_connectomes()
-    shared_model = fit_srm(data_list, n_features=2)
-    # save_srm_outputs(shared_model, data_dict)
+    data_dict, data_list = load_avg_connectomes()
+    parcel_map = load_parcel_map()
+    subject_transforms, parcelwise_shared_responses = compute_srms(data_list, parcel_map, save=True)

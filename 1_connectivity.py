@@ -4,129 +4,154 @@ This script calculates functional connectivity matrices for each session/subject
 Currently, this is implemented with parcels as our connectivity targets, i.e. the connectivity
 matrices are (n_voxels x n_parcels).
 
-It is also possible to implement this voxel-to-voxel (chose not to do this because of both
-computational demands and potential functional meaninglessness of voxel correlations) and with
-searchlight spheres as our connectivity targets (TO-DO: implement this).
+It is also possible to implement this voxel-to-voxel (chose against this because of
+computational demands + potential functional meaninglessness of voxel correlations) and with
+searchlight spheres as our connectivity targets.
 
 These connectomes are then passed to reliability.py to be assessed for within-subject reliability.
 If they look good, we will average or concatenate them and then derive SRMs from them in srm.py.
 
 Author: Chris Iyer
-Updated: 7/20/2023
+Updated: 8/11/2023
 """
 
 import glob
 import numpy as np
+import nibabel as nib
 from nilearn import datasets
-from nilearn.maskers import MultiNiftiMasker, MultiNiftiLabelsMasker, NiftiSpheresMasker
-from nilearn.connectome import ConnectivityMeasure
-from sklearn.covariance import EmpiricalCovariance
+from nilearn.image import resample_img, math_img
+from nilearn.maskers import MultiNiftiMasker, MultiNiftiLabelsMasker
+from joblib import Parallel, delayed
 from scipy.stats import pearsonr
-from datetime import date
 from math import tanh
 
-def load_data(FILE_PATHS=[], 
-            strategy = 'parcel', 
-            schaefer_n_rois=400, 
-            sphere_radius=8, 
-            sphere_spacing=6):
-    """
-    This function loads data in 3 different ways:
-    1. (NOT EFFICIENT) Strategy = voxel: extracts direct voxel timeseries
-    2. Strategy = parcel: extracts parcel timeseries from schaefer 2018 atlas with a given # of ROIs
-    3. (NOT IMPLEMENTED) Strategy = searchlight: extracts timeseries of spheres of a given radius and spacing
+def get_gm_mask():
+    """get gray matter mask (NOT CURRENTLY BEING USED, because parcellation is similar)"""
+    gm_probseg = nib.load('data/templates/tpl-MNI152NLin2009cAsym_res-02_label-GM_probseg.nii.gz')
+    return math_img('img >= 0.5', img=gm_probseg)
 
-    NOTE: the masker.fit_transform functions return an array of the shape (n_TRs x n_voxels)
-    """
+def get_parcellation(schaefer_n_rois=400, resample_target=''):
+    """get Schaefer 2018 parcellation. includes parcel labels, parcel map, and binarized mask of non-background voxels"""
+    schaefer_atlas = datasets.fetch_atlas_schaefer_2018(n_rois=schaefer_n_rois, 
+                                                        yeo_networks=7, 
+                                                        resolution_mm=2,
+                                                        data_dir='data/templates', 
+                                                        verbose=0)
+    schaefer_resampled = resample_img(schaefer_atlas.maps, 
+                                        target_shape = resample_target.shape[:3],
+                                        target_affine = resample_target.affine,
+                                        interpolation = 'nearest')
 
+    return schaefer_atlas.labels, schaefer_resampled, math_img('img > 0', img=schaefer_resampled)
+
+def shape_affine_checks(FILE_PATHS):
+    """check if the shape & affine of every file match each other"""
+    target_shape, target_affine = (nib.load(FILE_PATHS[0]).shape, nib.load(FILE_PATHS[0]).affine)
+    for f in FILE_PATHS:
+        img = nib.load(f)
+        if img.shape != target_shape or not np.all(img.affine == target_affine):
+            return False
+    return True
+
+
+def load_data(FILE_PATHS=[], schaefer_n_rois=400,):
+    """
+    This function will load functional data from given files and return other information to help later on.
+
+    Inputs:
+        - FILE_PATHS: list of files with functional images to load (preferably all of one subject's sessions)
+        - schaefer_n_rois: number of parcels of the Schaefer 2018 atlas that we load
+
+    Outputs:
+        - subject_session_list = list of (sub, ses) pairs that should match the data output
+        - parcel_data: session-wise list of parcel-averaged timeseries values
+        - voxel_data: session-wise list of voxel timeseries values
+                Note that we're no longer keeping the voxel values parcel-organized when loading them in.
+                Instead, we'll flatten the parcel map and use it to mask specific parcels later on.
+        - parcel_map_flat: a *flattened* map of parcel values excluding the background. This should match the # of voxels in dimensions
+                and correspond directly to what parcel each voxel belongs to.
+
+    NOTE: our data has been formatted to the MNI152NLin2009cAsym_res-2 during fMRIPrep pre-processing
+    """
     if FILE_PATHS == []:
-        FILE_PATHS = glob.glob('data/rest/*.nii.gz') # all rest data by default
+        FILE_PATHS = glob.glob('data/rest/*.nii.gz') # all rest data in my current testing dir by default
+    
+    if not shape_affine_checks(FILE_PATHS):
+        return 'ERROR: data do not share the same shape and affine' 
+
+    subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in FILE_PATHS]
+
+    parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois, resample_target = nib.load(FILE_PATHS[0])) 
+    parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
+    np.save('outputs/parcel_map_flat.npy', parcel_map_flat)
 
     masker_args = {
-        'standardize': 'zscore_sample', # ??
+        'standardize': 'zscore_sample', # ?
         'n_jobs': -1,
-        # add: mask_img from fmriprep brain mask?
-        # not doing any: smoothing, detrend, standardize, low_pass, high_pass, t_r
     }
 
-    if strategy == 'voxel':
-        masker = MultiNiftiMasker(mask_strategy = 'whole-brain-template', # or gm-template?
-                                  **masker_args)
+    parcel_masker = MultiNiftiLabelsMasker(
+        labels_img = parcel_map,
+        labels = parcel_labels,
+        **masker_args
+    )
+    parcel_data = parcel_masker.fit_transform(FILE_PATHS)
 
-    elif strategy == 'parcel':
-        schaefer_atlas = datasets.fetch_atlas_schaefer_2018(n_rois=schaefer_n_rois, 
-                                                        yeo_networks=7, 
-                                                        resolution_mm=2, # because our data is too
-                                                        data_dir='data/schaefer', 
-                                                        verbose=0)
-        masker = MultiNiftiLabelsMasker(labels_img = schaefer_atlas.maps,
-                                labels = schaefer_atlas.labels,
-                                resampling_target = 'data',
-                                strategy = 'mean',
-                                **masker_args)
-
-    elif strategy == 'searchlight':
-        sphere_coords = [] # get the centerpoint coordinates of spheres - these current numbers are incorrect
-        for x in range(-90, 91, sphere_spacing):
-            for y in range(-126, 91, sphere_spacing):
-                for z in range(-72, 73, sphere_spacing):
-                    sphere_coords.append((x, y, z))
-        masker = NiftiSpheresMasker(seeds = sphere_coords, 
-                                    radius=sphere_radius, 
-                                    **masker_args)
-        return [masker.fit_transform(f) for f in FILE_PATHS]
-
-    # this only works for the multimaskers with voxel/parcel
-    return masker.fit_transform(FILE_PATHS)
-
-def compute_fc_voxel(voxel_timeseries, cov_estimator=EmpiricalCovariance()):
-    """ 
-    Full voxel-to-voxel connectivity/correlation matrix
-    If passed the parcel timeseries, this will compute a parcel-to-parcel matrix.
-    NOTES:
-        - This will take forever with the current implementation -- *replace with FCMA toolbox?*
-        - Default nilearn covariance estimator is LedoitWolf, replacing here with EmpiricalCovariance() for pearson
-    """
-    correlation_measure = ConnectivityMeasure(kind="correlation", cov_estimator=cov_estimator)
-    return correlation_measure.fit_transform(voxel_timeseries)
-
-def correlate_rows(mat1, mat2, zscore=False):
-    """ 
-    Helper function for below
-    Returns a matrix with the Pearson r correlation of each column (voxel) of mat1 with each column (parcel/target) of mat2
-    """
-    correlation_matrix = np.empty((mat1.shape[1], mat2.shape[1]))
-    for i in range(mat1.shape[0]):
-        for j in range(mat2.shape[0]):
-            correlation_matrix[i, j] = pearsonr(mat1[:, i], mat2[:, j])[0]
-            if zscore:
-                # fisher transformation
-                correlation_matrix[i,j] = tanh(correlation_matrix[i,j])
-    return correlation_matrix
-
-def compute_fc_target(voxel_timeseries, target_timeseries, zscore=True):
-    """ 
-    This will take each column in the voxel timeseries (across all the TRs/rows) 
-    and correlate it with each column in the target timeseries.
-    Connectivity targets could be the parcel timeseries, or a searchlight timeseries
+    voxel_masker = MultiNiftiMasker(
+        mask_img = parcel_mask, # CRUCIAL: need this to be the case so we can know which parcel each voxel belongs to later
+        **masker_args
+    )
+    voxel_data = voxel_masker.fit_transform(FILE_PATHS)
     
-    NOTE: The connectivity target in which a given voxel resides is not excluded yet -- should it be?
+    return subject_session_list, voxel_data, parcel_data, parcel_map_flat, parcel_labels
+
+
+def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save=True): # TO-DO: MAKE THIS MORE EFFICIENT
     """
-    return [correlate_rows(voxel_timeseries[i], target_timeseries[i], zscore) for i in range(len(voxel_timeseries))]
-
-# nilearn.plotting.plot_connectome?
-
-def write_connectomes(connectomes):
-    # write our outputs back to files to read in for later use
-    outpath = 'outputs/connectomes/'
-    ids = [file[file.find('sub'): file.find('sub')+14] for file in glob.glob('data/rest/*.nii.gz')]
-
-    for sub in range(len(connectomes)):
-        connectomes[sub].tofile(outpath + ids[sub] + '_connectome' + date.today())
+    For each subject/session, we compute a functional connectivity matrix by correlating each voxel's timeseries with 
+    each parcel's timeseries. We parallelize the process with joblib's Parallel and delayed() functions to make things quicker.
     
+    We considered excluding the parcel in which each voxel resides from its correlation values, but then what do we replace the 
+    value with in the correlation matrix? As is, nothing is excluded.
+
+    Inputs:
+        - (sub, ses) pairs describing each value in the data lists
+        - parcel_data and voxel_data contain session-wise lists of either parcel-averaged or voxel values
+        - zscore: whether to Fisher z-transform (tanh) the correlation values)
+        - save: whether to save the connectomes to .npz files
+    Outputs:
+        - subject/session list of connectomes, matching the ordering of subject_session_list
+    Notes:
+        - The parcel_data could be replaced with searchlight-averaged timeseries, or any other connectivity target.
+        - Not using nilearn ConnectivityMeasure because this is across two matrices--couldn't figure that out
+    """
+    connectomes = []
+
+    def correlate_one_pair(v_col, p_col, zscore):
+        corr = pearsonr(v_col, p_col)[0]
+        if zscore:
+            return tanh(corr)
+        return corr
+
+    def correlate_one_voxel(v_col, zscore):
+        return [correlate_one_pair(v_col, p_col, zscore) for p_col in curr_parcel_data.T]
+
+    for curr_voxel_data, curr_parcel_data in zip(voxel_data, parcel_data):
+        connectomes.append(
+            Parallel(n_jobs=-1)(
+                delayed(correlate_one_voxel)(v_col, zscore) for v_col in curr_voxel_data.T
+            )
+        )
+
+    if save:
+        np.save('outputs/connectomes/subject_session_list.npy', subject_session_list)
+        for s,c in zip(subject_session_list, connectomes):
+            np.save(f'outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', c) # c.tofile()?
+
+    return connectomes
+
 
 if __name__ == "__main__":
-    voxel_data = load_data(strategy='voxel')
-    parcel_data = load_data(strategy='parcel')
-    connectomes = compute_fc_target(voxel_data, parcel_data, zscore = True)
-    write_connectomes(connectomes)
+    test_file = glob.glob('data/rest/*ses-01*nii.gz')[0] # change this 
+    subject_session_list, voxel_data, parcel_data = load_data([test_file]) # parcel_data and voxel_data are lists of subjects
+    connectomes = compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save=True)
