@@ -13,4 +13,8 @@
 # ------------------------------------------
 
 module load python/3.11
-python sherlock_connectivity.py
+python3 pip3 install --user nibabel
+python3 pip3 install --user nilearn
+python3 pip3 install --user joblib
+
+python3 sherlock_connectivity.py
