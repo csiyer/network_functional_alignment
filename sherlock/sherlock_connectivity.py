@@ -92,7 +92,7 @@ def load_data(FILE_PATHS=[], CONFOUNDS_FILES = [], schaefer_n_rois=400,):
 
     parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois, resample_target = nib.load(FILE_PATHS[0])) 
     parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
-    np.save('outputs/parcel_map_flat.npy', parcel_map_flat)
+    np.save('/home/users/csiyer/network_functional_alignment/outputs/parcel_map_flat.npy', parcel_map_flat)
 
     masker_args = {
         'standardize': 'zscore_sample', # ?
