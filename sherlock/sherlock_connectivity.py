@@ -21,14 +21,13 @@ import nibabel as nib
 from nilearn import datasets
 from nilearn.image import resample_img, math_img
 from nilearn.maskers import MultiNiftiMasker, MultiNiftiLabelsMasker
-from nilearn.interfaces.fmriprep import load_confounds
 from joblib import Parallel, delayed
 from scipy.stats import pearsonr
 from math import tanh 
 
 def get_rest_filenames(BIDS_DIR):
     files = glob.glob(BIDS_DIR + '/**/*rest*optcomDenoised*.nii.gz', recursive = True)
-    confounds_files = glob.glob(BIDS_DIR + '/**/*rest*confounds*.nii.gz', recursive = True)
+    confounds_files = glob.glob(BIDS_DIR + '/**/*rest*confounds*.tsv', recursive = True)
     return files, confounds_files
 
 def get_gm_mask():
