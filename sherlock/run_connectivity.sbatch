@@ -12,6 +12,7 @@
 #SBATCH --mail-type=END
 # ------------------------------------------
 
+. ${HOME}/.bashrc  
 conda activate fa
 
 python3 sherlock_connectivity.py
