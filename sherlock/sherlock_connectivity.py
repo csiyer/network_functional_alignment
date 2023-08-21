@@ -135,6 +135,8 @@ def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save
         - The parcel_data could be replaced with searchlight-averaged timeseries, or any other connectivity target.
         - Not using nilearn ConnectivityMeasure because this is across two matrices--couldn't figure that out
     """
+    print('voxel data shape: ', voxel_data[0].shape)
+    print('parcel data shape: ', parcel_data[0].shape)
     connectomes = []
 
     def correlate_one_pair(v_col, p_col, zscore):
@@ -153,12 +155,14 @@ def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save
                 delayed(correlate_one_voxel)(v_col, zscore) for v_col in curr_voxel_data.T
             )
         )
+
+    print('connectomes shape: ', connectomes[0].shape)
     print('saving connectomes')
 
     if save:
         np.save('../outputs/connectomes/subject_session_list.npy', subject_session_list)
         for s,c in zip(subject_session_list, connectomes):
-            np.save(f'../outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', c) # c.tofile()?
+            np.save(f'../outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', c)
 
     return connectomes
 
