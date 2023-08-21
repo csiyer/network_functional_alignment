@@ -102,14 +102,14 @@ def load_data(FILE_PATHS=[], CONFOUNDS_FILES = [], schaefer_n_rois=400,):
         labels = parcel_labels,
         **masker_args
     )
-    parcel_data = parcel_masker.fit_transform(FILE_PATHS, confounds = CONFOUNDS_FILES)
+    parcel_data = parcel_masker.fit_transform(FILE_PATHS) #, confounds = CONFOUNDS_FILES)
     print('loaded parcel data')
 
     voxel_masker = MultiNiftiMasker(
         mask_img = parcel_mask, # CRUCIAL: need this to be the case so we can know which parcel each voxel belongs to later
         **masker_args
     )
-    voxel_data = voxel_masker.fit_transform(FILE_PATHS, confounds = CONFOUNDS_FILES)
+    voxel_data = voxel_masker.fit_transform(FILE_PATHS) #, confounds = CONFOUNDS_FILES)
     print('loaded voxel data')
     
     return subject_session_list, voxel_data, parcel_data, parcel_map_flat, parcel_labels
@@ -170,6 +170,6 @@ if __name__ == "__main__":
     files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
     subject_session_list, voxel_data, parcel_data, _, _ = load_data(files)
     # subject_session_list, voxel_data, parcel_data, _, _ = load_data(files, confounds_files) # parcel_data and voxel_data are lists of subjects
-    print(f'loaded all {len(files)} files! \n')
+    print(f'loaded all {len(subject_session_list)} files! \n')
     connectomes = compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save=True)
     
