@@ -12,9 +12,6 @@
 #SBATCH --mail-type=END
 # ------------------------------------------
 
-module load python/3.9.0
-python3 pip3 install --user nibabel
-python3 pip3 install --user nilearn
-python3 pip3 install --user joblib
+conda activate fa
 
 python3 sherlock_connectivity.py
