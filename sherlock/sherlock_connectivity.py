@@ -53,9 +53,11 @@ def get_parcellation(schaefer_n_rois=400, resample_target=''):
 def shape_affine_checks(FILE_PATHS):
     """check if the shape & affine of every file match each other"""
     target_shape, target_affine = (nib.load(FILE_PATHS[0]).shape, nib.load(FILE_PATHS[0]).affine)
+    print('target file info:', target_shape, target_affine)
     for f in FILE_PATHS:
         img = nib.load(f)
         if img.shape != target_shape or not np.all(img.affine == target_affine):
+            print(f, img.shape, img.affine)
             return False
     return True
 
