@@ -54,7 +54,7 @@ def shape_affine_checks(FILE_PATHS):
     return True
 
 
-def load_data(FILE_PATHS=[], schaefer_n_rois=400,):
+def load_data(FILE_PATHS=[], CONFOUNDS_FILES = [], schaefer_n_rois=400,):
     """
     This function will load functional data from given files and return other information to help later on.
 
@@ -77,6 +77,7 @@ def load_data(FILE_PATHS=[], schaefer_n_rois=400,):
         FILE_PATHS = glob.glob('data/rest/*.nii.gz') # all rest data in my current testing dir by default
     
     if not shape_affine_checks(FILE_PATHS):
+        print('shape affine check error')
         return 'ERROR: data do not share the same shape and affine' 
 
     subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in FILE_PATHS]
@@ -95,13 +96,15 @@ def load_data(FILE_PATHS=[], schaefer_n_rois=400,):
         labels = parcel_labels,
         **masker_args
     )
-    parcel_data = parcel_masker.fit_transform(FILE_PATHS)
+    parcel_data = parcel_masker.fit_transform(FILE_PATHS, confounds = CONFOUNDS_FILES)
+    print('loaded parcel data')
 
     voxel_masker = MultiNiftiMasker(
         mask_img = parcel_mask, # CRUCIAL: need this to be the case so we can know which parcel each voxel belongs to later
         **masker_args
     )
-    voxel_data = voxel_masker.fit_transform(FILE_PATHS)
+    voxel_data = voxel_masker.fit_transform(FILE_PATHS, confounds = CONFOUNDS_FILES)
+    print('loaded voxel data')
     
     return subject_session_list, voxel_data, parcel_data, parcel_map_flat, parcel_labels
 
