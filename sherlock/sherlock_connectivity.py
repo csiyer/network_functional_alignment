@@ -92,7 +92,7 @@ def load_data(FILE_PATHS=[], CONFOUNDS_FILES = [], schaefer_n_rois=400,):
 
     parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois, resample_target = nib.load(FILE_PATHS[0])) 
     parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
-    np.save('/home/users/csiyer/network_functional_alignment/outputs/parcel_map_flat.npy', parcel_map_flat)
+    np.save('../outputs/parcel_map_flat.npy', parcel_map_flat)
 
     masker_args = {
         'standardize': 'zscore_sample', # ?
@@ -157,9 +157,9 @@ def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save
     print('saving connectomes')
 
     if save:
-        np.save('outputs/connectomes/subject_session_list.npy', subject_session_list)
+        np.save('../outputs/connectomes/subject_session_list.npy', subject_session_list)
         for s,c in zip(subject_session_list, connectomes):
-            np.save(f'outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', c) # c.tofile()?
+            np.save(f'../outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', c) # c.tofile()?
 
     return connectomes
 
