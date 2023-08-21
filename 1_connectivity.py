@@ -153,5 +153,5 @@ def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save
 
 if __name__ == "__main__":
     test_file = glob.glob('data/rest/*ses-01*nii.gz')[0] # change this 
-    subject_session_list, voxel_data, parcel_data = load_data([test_file]) # parcel_data and voxel_data are lists of subjects
+    subject_session_list, voxel_data, parcel_data, _, _ = load_data([test_file]) # parcel_data and voxel_data are lists of subjects
     connectomes = compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save=True)
