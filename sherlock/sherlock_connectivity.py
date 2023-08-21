@@ -168,7 +168,7 @@ def compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save
 
 if __name__ == "__main__":
     files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
-    print(f'loaded all {len(files)} files! \n')
     subject_session_list, voxel_data, parcel_data, _, _ = load_data(files, confounds_files) # parcel_data and voxel_data are lists of subjects
+    print(f'loaded all {len(files)} files! \n')
     connectomes = compute_fcs(subject_session_list, voxel_data, parcel_data, zscore=True, save=True)
     
