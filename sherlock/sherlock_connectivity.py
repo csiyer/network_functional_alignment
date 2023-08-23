@@ -77,7 +77,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
     """
     masker_args = {
         'standardize': 'zscore_sample', # ?
-        'n_jobs': 40,
+        'n_jobs': 32,
     }
 
     voxel_masker = NiftiMasker(
@@ -117,7 +117,7 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
     def correlate_one_voxel(v_col, zscore):
         return [correlate_one_pair(v_col, p_col, zscore) for p_col in parcel_data.T]
     
-    list_of_voxels = Parallel(n_jobs=40)(
+    list_of_voxels = Parallel(n_jobs=32)(
         delayed(correlate_one_voxel)(v_col, zscore) for v_col in voxel_data.T
     )
 
