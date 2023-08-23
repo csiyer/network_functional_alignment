@@ -128,9 +128,6 @@ if __name__ == "__main__":
 
     files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
     
-    files = ['data/rest/sub-s03_ses-01_task-rest_run-1_space-MNI_desc-optcomDenoised_bold.nii.gz']
-    confounds_files = ['data/confounds/sub-s03_ses-01_task-rest_run-1_desc-confounds_timeseries.tsv']
-    
     subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
     print('Shape/affine checks result: ', shape_affine_checks(files))
     parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois = 400, resample_target = nib.load(files[0])) 
