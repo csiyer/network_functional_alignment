@@ -123,12 +123,13 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
 if __name__ == "__main__":
 
     files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
-    
     subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
+    
     print('Shape/affine checks result: ', shape_affine_checks(files))
+    
     parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois = 400, resample_target = nib.load(files[0])) 
     parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
-    # np.save('../outputs/parcel_map_flat.npy', parcel_map_flat)
+    np.save('/scratch/users/csiyer/parcel_map_flat.npy', parcel_map_flat)
 
     print('subjects/sessions to do: \n', subject_session_list, '\n')
 
@@ -138,6 +139,7 @@ if __name__ == "__main__":
         voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map, parcel_mask)
         print('loaded data')
         connectome = compute_fc_one_session(voxel_data, parcel_data, zscore=True)
-        np.save(f'../outputs/connectomes/{s[0]}_{s[1]}_connectome.npy', connectome)
+        print('got connectome')
+        np.save(f'/scratch/users/csiyer/{s[0]}_{s[1]}_connectome.npy', connectome)
 
     print(f'finished all {len(files)} sessions!')
