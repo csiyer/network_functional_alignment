@@ -22,7 +22,6 @@ from nilearn import datasets
 from nilearn.image import resample_img, math_img
 from nilearn.maskers import NiftiMasker, NiftiLabelsMasker
 from joblib import Parallel, delayed
-from scipy.stats import pearsonr
 from math import tanh 
 
 def get_rest_filenames(BIDS_DIR):
@@ -108,17 +107,14 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
         - The parcel_data could be replaced with searchlight-averaged timeseries, or any other connectivity target.
         - Not using nilearn ConnectivityMeasure because this is across two matrices--couldn't figure that out
     """
-    def correlate_one_pair(v_col, p_col, zscore):
-        corr = pearsonr(v_col, p_col)[0]
+    def correlate_one_voxel(i):
+        corrs = np.corrcoef(voxel_data[:,i], parcel_data, rowvar=False)[0, 1:]
         if zscore:
-            return tanh(corr)
-        return corr
+            return [tanh(c) for c in corrs]
+        return corrs
 
-    def correlate_one_voxel(v_col, zscore):
-        return [correlate_one_pair(v_col, p_col, zscore) for p_col in parcel_data.T]
-    
-    list_of_voxels = Parallel(n_jobs=32)(
-        delayed(correlate_one_voxel)(v_col, zscore) for v_col in voxel_data.T
+    list_of_voxels = Parallel(n_jobs = 32)(
+        delayed(correlate_one_voxel)(i) for i in range(voxel_data.shape[1])
     )
 
     return np.vstack(list_of_voxels)
@@ -133,6 +129,8 @@ if __name__ == "__main__":
     parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois = 400, resample_target = nib.load(files[0])) 
     parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
     # np.save('../outputs/parcel_map_flat.npy', parcel_map_flat)
+
+    print('subjects/sessions to do: \n', subject_session_list, '\n')
 
     for s,f,c in zip(subject_session_list, files, confounds_files):
         print('Beginning subject/session: ', s)
