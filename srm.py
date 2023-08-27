@@ -25,13 +25,13 @@ from joblib import Parallel, delayed
 
 def load_avg_connectomes():
     """load subject-average connectomes (voxels x parcels) computed in reliability.ipynb"""
-    sub_list = np.unique([f[f.find('sub'):f.find('sub')+7] for f in glob.glob('outputs/connectomes/*avg*')])
-    data_list = [np.load(glob.glob(f'output/connectomes/{sub}_connectome_avg.npy')[0]) for sub in sub_list]
+    sub_list = np.unique([f[f.find('sub'):f.find('sub')+7] for f in glob.glob('/scratch/users/csiyer/*avg*')])
+    data_list = [np.load(glob.glob(f'/scratch/users/csiyer/{sub}_connectome_avg.npy')[0]) for sub in sub_list]
     return data_list, sub_list
 
 def load_parcel_map():
     """Schaefer 2018 parcel map that corresponds exactly the voxel dimension of the connectomes (Saved in 1_connectivity.py)"""
-    return np.load('outputs/parcel_map_flat.npy')
+    return np.load('/scratch/users/csiyer/parcel_map_flat.npy')
 
 def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save=False):
     """
@@ -64,16 +64,16 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
     parcelwise_shared_responses = [s[0] for s in srm_outputs] # concatenate all the parcelwise shared space responses/connectivities
 
     subject_transforms = [np.zeros((data_list[0].shape[0], n_features)) for i in range(len(data_list))] # empty initalize
-    
+
     for _, w_, parcel_idx in srm_outputs: # concatenate transforms into subject-wise all-voxel transformation matrices 
         for i,sub in enumerate(subject_transforms):
             sub[parcel_idx,:] = w_[i]
     # i know there's a better way to do that ^ with more linear algebra. urgh
 
     if save:
-        np.save('outputs/srm/parcelwise_shared_responses.npy', parcelwise_shared_responses)
+        np.save('/scratch/users/csiyer/parcelwise_shared_responses.npy', parcelwise_shared_responses)
         for i,sub in enumerate(subject_transforms):
-            np.save(f'outputs/srm/{sub_list[i]}_srm_transform.npy', sub)
+            np.save(f'/scratch/users/csiyer/{sub_list[i]}_srm_transform.npy', sub)
     
     return subject_transforms, parcelwise_shared_responses 
 
