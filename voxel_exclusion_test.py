@@ -6,7 +6,7 @@ from nilearn.image import math_img
 from nilearn.plotting import view_img, plot_glass_brain
 from connectivity import get_parcellation
 
-files = glob.glob('/scratch/users/csiyer/*ses*connectome*')
+files = glob.glob('/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI/**/*rest*optcomDenoised*.nii.gz', recursive = True)
 sublist = np.unique([f[f.find('sub'):f.find('sub')+7] for f in files])
 
 def get_missing_voxels(within_sub_missing_allowed=11, mask=''):
@@ -46,5 +46,5 @@ for missing_num in [0,6,11]:
             out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = gm_mask.get_fdata())
         else: 
             out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = double_mask.get_fdata())
-        np.save(f'/scratch/users/csiyer/voxel_test/missing-{missing_num}_mask-{mask}.npy')
+        np.save(f'/scratch/users/csiyer/voxel_test/missing-{missing_num}_mask-{mask}.npy', out)
 
