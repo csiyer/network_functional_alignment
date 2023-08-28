@@ -2,7 +2,7 @@
 #SBATCH -J network_connectivity_csi
 #SBATCH --time=1-00:00:00
 #SBATCH -n 1
-#SBATCH --cpus-per-task=32
+#SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=4G
 #SBATCH -p russpold
 # Outputs ---------------------------------
@@ -14,4 +14,4 @@
 
 . ${HOME}/.bashrc  
 conda activate fa
-python3 srm.py # python3 connectivity.py
+python3 voxel_exclusion_test.py # python3 connectivity.py
