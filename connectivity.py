@@ -47,19 +47,14 @@ def get_gm_mask():
     gm_probseg = nib.load('data/templates/tpl-MNI152NLin2009cAsym_res-02_label-GM_probseg.nii.gz')
     return math_img('img >= 0.5', img=gm_probseg)
 
-def get_parcellation(schaefer_n_rois=400, resample_target=''):
-    """get Schaefer 2018 parcellation. includes parcel labels, parcel map, and binarized mask of non-background voxels"""
-    schaefer_atlas = datasets.fetch_atlas_schaefer_2018(n_rois=schaefer_n_rois, 
-                                                        yeo_networks=7, 
-                                                        resolution_mm=2,
-                                                        data_dir='data/templates', 
-                                                        verbose=0)
-    schaefer_resampled = resample_img(schaefer_atlas.maps, 
-                                        target_shape = resample_target.shape[:3],
-                                        target_affine = resample_target.affine,
-                                        interpolation = 'nearest')
-
-    return schaefer_atlas.labels, schaefer_resampled, math_img('img > 0', img=schaefer_resampled)
+def get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target=''):
+    """get either Schaefer 2018 or DiFuMo parcellation. includes parcel labels, parcel map, and binarized mask of non-background voxels"""
+    if atlas == 'schaefer':
+        atlas = datasets.fetch_atlas_schaefer_2018(n_rois=n_dimensions, yeo_networks=7, resolution_mm=2, data_dir='data/templates', verbose=0)
+    elif atlas == 'difumo':
+        atlas = datasets.fetch_atlas_difumo(dimension=n_dimensions, resolution_mm=2, data_dir='data/templates', verbose=0)
+    atlas_resampled = resample_img(atlas.maps, target_shape = resample_target.shape[:3], target_affine = resample_target.affine, interpolation = 'nearest')
+    return atlas.labels, atlas_resampled, math_img('img > 0', img=atlas_resampled)
 
 
 def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], parcel_map = [], parcel_mask = []):
@@ -73,22 +68,29 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
 
     Outputs:
         - parcel_data: parcel-averaged timeseries values
-        - voxel_data: voxel timeseries values, masked to all voxels within the parcel map (so that we can track which parcel they're in later on)
+        - voxel_data: voxel timeseries values, masked to all voxels within the gray matter mask + parcel map (so that we can track which parcel they're in later on)
 
     NOTE: our data has been formatted to the MNI152NLin2009cAsym_res-2 during fMRIPrep pre-processing
     """
+    gm_mask = get_gm_mask()
+    combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
+
+    # IMPORTANT: mask the parcel map and save it so that later we know what parcels the masked voxels belong to
+    np.save('/scratch/users/csiyer/parcel_map_flat.npy',  parcel_map.get_fdata()[combined_mask.get_fdata() > 0].flatten() )
+
     masker_args = {
         'standardize': 'zscore_sample', # ?
         'n_jobs': 32,
     }
-
+    
     voxel_masker = NiftiMasker(
-        mask_img = parcel_mask, # CRUCIAL: need this to be the case so we can know which parcel each voxel belongs to later
+        mask_img = combined_mask, 
         **masker_args
     )
     voxel_data = voxel_masker.fit_transform(FILE_PATH, confounds = CONFOUNDS_FILE)
 
     parcel_masker = NiftiLabelsMasker(
+        mask_img = combined_mask,
         labels_img = parcel_map,
         labels = parcel_labels,
         **masker_args
@@ -130,9 +132,7 @@ if __name__ == "__main__":
     
     print('Shape/affine checks result: ', shape_affine_checks(files))
     
-    parcel_labels, parcel_map, parcel_mask = get_parcellation(schaefer_n_rois = 400, resample_target = nib.load(files[0])) 
-    parcel_map_flat = parcel_map.get_fdata()[parcel_map.get_fdata() > 0].flatten()  
-    np.save('/scratch/users/csiyer/parcel_map_flat.npy', parcel_map_flat)
+    parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
     print('subjects/sessions to do: \n', subject_session_list, '\n')
 

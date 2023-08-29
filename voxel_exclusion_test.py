@@ -1,3 +1,17 @@
+"""
+We used this script to assess how many voxels within the masks we use were missing signal.
+Most of the missing voxels were in the cerebellum (likely FOV exclusion) and OFC (likely dropout).
+
+We wanted to see how many voxels would be excluded based on our choice of mask (GM mask vs. combined GM-Schaefer parcel mask)
+as well as how many missing voxels per subject we would allow (i.e., does a voxel need to have signal in all 12 of a subject's
+rest sessions to be included in our session-averaged analysis, or just 1? Or somewhere in between?)
+
+Based on the results, no voxels would be excluded after within-subject averaging if we use any but the most stringent threshold 
+(a single missing voxel in one session excludes that voxel from the entire analysis). We also opted for the combined mask based
+on 
+"""
+
+
 import glob
 import numpy as np
 import nibabel as nib
@@ -21,13 +35,14 @@ def get_missing_voxels(within_sub_missing_allowed=11, mask=''):
 
     for sub in sublist:
         subfiles = [f for f in files if sub in f]
+        
         def one_session(f):
             session_zeros = math_img('img == 0', img = mean_img(nib.load(f))).get_fdata()
             return session_zeros * mask
-
-        sessions = Parallel(n_jobs = -1, backend='threading')(
+        sessions = Parallel(n_jobs = 12, backend='threading')(
             delayed(one_session)(f) for f in subfiles
         )
+
         sub_missing_counts = sum(sessions)
         master_missing_img += (sub_missing_counts > within_sub_missing_allowed).astype(int) 
 
