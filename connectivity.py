@@ -82,7 +82,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
         'standardize': 'zscore_sample', # ?
         'n_jobs': 32,
     }
-    
+
     voxel_masker = NiftiMasker(
         mask_img = combined_mask, 
         **masker_args
@@ -106,7 +106,7 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
         - parcel_data and voxel_data for one session (from load_data_one_session) 
         - zscore: whether to Fisher z-transform (tanh) the correlation values)
     Outputs:
-        - connectome
+        - voxel-to-parcel connectivity matrix
     Notes:
         - Considered excluding the parcel in which each voxel resides from its correlation values, but then what to replace with? 
         - The parcel_data could be replaced with searchlight-averaged timeseries, or any other connectivity target.
@@ -121,26 +121,25 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
     list_of_voxels = Parallel(n_jobs = 32)(
         delayed(correlate_one_voxel)(i) for i in range(voxel_data.shape[1])
     )
-
     return np.vstack(list_of_voxels)
 
 
 if __name__ == "__main__":
 
     files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
-    subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
-    
     print('Shape/affine checks result: ', shape_affine_checks(files))
-    
-    parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
+    subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
     print('subjects/sessions to do: \n', subject_session_list, '\n')
+
+    parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
     for s,f,c in zip(subject_session_list, files, confounds_files):
         print('Beginning subject/session: ', s)
 
         voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map, parcel_mask)
         print('loaded data')
+        
         connectome = compute_fc_one_session(voxel_data, parcel_data, zscore=True)
         print('got connectome')
         np.save(f'/scratch/users/csiyer/{s[0]}_{s[1]}_connectome.npy', connectome)
