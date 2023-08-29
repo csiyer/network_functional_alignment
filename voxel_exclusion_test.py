@@ -43,10 +43,10 @@ count = 0
 for missing_num in [0,6,11]:
     for mask in ['gm', 'double']:
         if mask == 'gm':
-            out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = gm_mask.get_fdata())
+            out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = gm_mask)
             count += 1
         else: 
-            out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = double_mask.get_fdata())
+            out = get_missing_voxels(within_sub_missing_allowed = missing_num, mask = double_mask)
             count += 1
         print(f'count done: {count}, saving now')
         np.save(f'/scratch/users/csiyer/voxel_test/missing-{missing_num}_mask-{mask}.npy', out)
