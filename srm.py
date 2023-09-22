@@ -57,7 +57,7 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
         shared_model.fit(data_parcel)
         return shared_model.s_, shared_model.w_, parcel_idx
 
-    srm_outputs = Parallel(n_jobs=-1)(
+    srm_outputs = Parallel(n_jobs=32)(
         delayed(single_parcel_srm)(data_list, parcel_map, parcel_label) for parcel_label in np.sort(np.unique(parcel_map))
     )
 
