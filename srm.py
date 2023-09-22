@@ -15,7 +15,7 @@ transformation matrix per subject, which is saved and used in task_decoding.py
 NOTE: the SRM derivation code is copied from the BrianIAK library (https://brainiak.org/)
 
 Author: Chris Iyer
-Updated: 8/27/23
+Updated: 9/22/23
 """
 
 import glob

@@ -9,10 +9,7 @@ Updated: 9/22/2023
 import glob
 import numpy as np
 
-
-
 def load_connectomes(path):
-
     data_dict = {}
     for sub in np.unique([f[f.find('sub'):f.find('sub')+7] for f in glob.glob(path + '*ses*')]):
         data_dict[sub] = {}

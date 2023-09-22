@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
-    for s,f,c in zip(subject_session_list, files):
+    for s,f,c in zip(subject_session_list, files, confounds_files): # actually not using confounds files in this iteration
         print('Beginning subject/session: ', s)
 
         voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map, parcel_mask)
