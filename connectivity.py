@@ -14,7 +14,7 @@ If they look good, we will average or concatenate them and then derive SRMs from
 This was run on Sherlock with 32 CPUs and 4G memory per CPU, which took 1-2 hours.
 
 Author: Chris Iyer
-Updated: 8/11/2023
+Updated: 9/22/2023
 """
 
 import glob
@@ -76,7 +76,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
     combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
 
     # IMPORTANT: mask the parcel map and save it so that later we know what parcels the masked voxels belong to
-    np.save('/scratch/users/csiyer/parcel_map_flat.npy',  parcel_map.get_fdata()[combined_mask.get_fdata() > 0].flatten() )
+    # np.save('/scratch/users/csiyer/parcel_map_flat.npy',  parcel_map.get_fdata()[combined_mask.get_fdata() > 0].flatten() )
 
     masker_args = {
         'standardize': 'zscore_sample', # ?
@@ -87,7 +87,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
         mask_img = combined_mask, 
         **masker_args
     )
-    voxel_data = voxel_masker.fit_transform(FILE_PATH, confounds = CONFOUNDS_FILE)
+    voxel_data = voxel_masker.fit_transform(FILE_PATH) # , confounds = CONFOUNDS_FILE)
 
     parcel_masker = NiftiLabelsMasker(
         mask_img = combined_mask,
@@ -95,7 +95,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
         labels = parcel_labels,
         **masker_args
     )
-    parcel_data = parcel_masker.fit_transform(FILE_PATH, confounds = CONFOUNDS_FILE)
+    parcel_data = parcel_masker.fit_transform(FILE_PATH) # , confounds = CONFOUNDS_FILE)
     
     return voxel_data, parcel_data
 
@@ -134,7 +134,7 @@ if __name__ == "__main__":
 
     parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
-    for s,f,c in zip(subject_session_list, files, confounds_files):
+    for s,f,c in zip(subject_session_list, files):
         print('Beginning subject/session: ', s)
 
         voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map, parcel_mask)

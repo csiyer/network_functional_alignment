@@ -79,6 +79,8 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
 
 
 if __name__ == "__main__":
+    print('beginning SRM')
     data_list, sub_list = load_avg_connectomes()
     parcel_map = load_parcel_map()
     subject_transforms, parcelwise_shared_responses = compute_srms(data_list, sub_list, parcel_map, save=True)
+    print('completed SRM')
