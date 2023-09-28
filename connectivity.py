@@ -73,10 +73,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
     NOTE: our data has been formatted to the MNI152NLin2009cAsym_res-2 during fMRIPrep pre-processing
     """
     gm_mask = get_gm_mask()
-    combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
-
-    # IMPORTANT: mask the parcel map and save it so that later we know what parcels the masked voxels belong to
-    np.save('/scratch/users/csiyer/parcel_map_flat.npy',  parcel_map.get_fdata()[combined_mask.get_fdata() > 0].flatten() )
+    combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask) # mask where it's gray matter above 50% and the parcellation applies
 
     masker_args = {
         'standardize': 'zscore_sample', # ?

@@ -20,6 +20,9 @@ Updated: 9/22/23
 
 import glob
 import numpy as np
+import nibabel as nib
+from nilearn.image import math_img
+from connectivity import get_gm_mask, get_parcellation
 from utils.brainiak import srm
 from joblib import Parallel, delayed
 
@@ -29,9 +32,13 @@ def load_avg_connectomes():
     data_list = [np.load(glob.glob(f'/scratch/users/csiyer/{sub}_connectome_avg.npy')[0]) for sub in sub_list]
     return data_list, sub_list
 
-def load_parcel_map():
+def load_parcel_map(n_dimensions, atlas='schaefer'):
     """Schaefer 2018 parcel map that corresponds exactly the voxel dimension of the connectomes (Saved in 1_connectivity.py)"""
-    return np.load('/scratch/users/csiyer/parcel_map_flat.npy')
+    gm_mask = get_gm_mask()
+    _, parcel_map, parcel_mask = get_parcellation(atlas = atlas, n_dimensions = n_dimensions, resample_target = nib.load('/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI/sub-s03/ses-01/func/sub-s03_ses-01_task-rest_run-1_space-MNI_desc-optcomDenoised_bold.nii.gz')) 
+    combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
+    parcel_map_flat = parcel_map.get_fdata()[combined_mask.get_fdata() > 0].flatten() # apply same mask we used on the data and flatten
+    return parcel_map_flat
 
 def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save=False):
     """
@@ -53,7 +60,7 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
     def single_parcel_srm(data_list, parcel_map, parcel_label, n_features):
         parcel_idx = np.where(parcel_map == parcel_label)
         data_parcel = [d[parcel_idx] for d in data_list]
-        shared_model = srm.SRM(n_iter=20, features=np.min([len(parcel_idx[0]), n_features])) # if parcel has < 50 voxels, use that # of features
+        shared_model = srm.SRM(n_iter=20, features=n_features) 
         shared_model.fit(data_parcel)
         return shared_model.s_, shared_model.w_, parcel_idx
 
@@ -81,6 +88,6 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
 if __name__ == "__main__":
     print('beginning SRM')
     data_list, sub_list = load_avg_connectomes()
-    parcel_map = load_parcel_map()
+    parcel_map = load_parcel_map(n_dimensions = 100)
     subject_transforms, parcelwise_shared_responses = compute_srms(data_list, sub_list, parcel_map, save=True)
     print('completed SRM')
