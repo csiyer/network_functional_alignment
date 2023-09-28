@@ -50,15 +50,15 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
         - parcelwise_shared_responses: each element is one parcel's 'shared response' in the common model. The meaning of this
             is less clear in the case of connectivity SRMs than traditional response SRMs, so we likely will ignore it--but saving it nonetheless.
     """
-    def single_parcel_srm(data_list, parcel_map, parcel_label):
+    def single_parcel_srm(data_list, parcel_map, parcel_label, n_features):
         parcel_idx = np.where(parcel_map == parcel_label)
         data_parcel = [d[parcel_idx] for d in data_list]
-        shared_model = srm.SRM(n_iter=20, features=50)
+        shared_model = srm.SRM(n_iter=20, features=np.min([len(parcel_idx[0]), n_features])) # if parcel has < 50 voxels, use that # of features
         shared_model.fit(data_parcel)
         return shared_model.s_, shared_model.w_, parcel_idx
 
     srm_outputs = Parallel(n_jobs=32)(
-        delayed(single_parcel_srm)(data_list, parcel_map, parcel_label) for parcel_label in np.sort(np.unique(parcel_map))
+        delayed(single_parcel_srm)(data_list, parcel_map, parcel_label, n_features) for parcel_label in np.sort(np.unique(parcel_map))
     )
 
     parcelwise_shared_responses = [s[0] for s in srm_outputs] # concatenate all the parcelwise shared space responses/connectivities
