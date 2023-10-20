@@ -15,6 +15,7 @@
 . ${HOME}/.bashrc  
 conda activate fa
 
-python3 connectivity.py
-python3 connectome_average.py
-python3 srm.py
+# python3 connectivity.py
+# python3 connectome_average.py # also handled by reliability.ipynb
+# python3 srm.py
+python3 task_decoding.py

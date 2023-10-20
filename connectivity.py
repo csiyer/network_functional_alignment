@@ -56,8 +56,14 @@ def get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target='')
     atlas_resampled = resample_img(atlas.maps, target_shape = resample_target.shape[:3], target_affine = resample_target.affine, interpolation = 'nearest')
     return atlas.labels, atlas_resampled, math_img('img > 0', img=atlas_resampled)
 
+def get_combined_mask():
+    # this is the combined gray matter + parcellation mask that we use to load in the data
+    gm_mask = get_gm_mask()
+    _, _, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
+    return math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
 
-def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], parcel_map = [], parcel_mask = []):
+
+def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], parcel_map = []):
     """
     This function will load functional data for one subject/session from a given filename and confound name.
     It is called repeatedly on all the subjects. 
@@ -72,8 +78,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
 
     NOTE: our data has been formatted to the MNI152NLin2009cAsym_res-2 during fMRIPrep pre-processing
     """
-    gm_mask = get_gm_mask()
-    combined_mask = math_img('img1 * img2', img1=gm_mask, img2=parcel_mask) # mask where it's gray matter above 50% and the parcellation applies
+    combined_mask = get_combined_mask() # mask where it's gray matter above 50% and the parcellation applies
 
     masker_args = {
         'standardize': 'zscore_sample', # ?
@@ -129,12 +134,12 @@ if __name__ == "__main__":
     subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
     print('subjects/sessions to do: \n', subject_session_list, '\n')
 
-    parcel_labels, parcel_map, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
+    parcel_labels, parcel_map, _ = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
 
     for s,f,c in zip(subject_session_list, files, confounds_files): # actually not using confounds files in this iteration
         print('Beginning subject/session: ', s)
 
-        voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map, parcel_mask)
+        voxel_data, parcel_data = load_data_one_session(f,c, parcel_labels, parcel_map)
         print('loaded data')
         
         connectome = compute_fc_one_session(voxel_data, parcel_data, zscore=True)
