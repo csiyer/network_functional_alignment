@@ -101,6 +101,9 @@ def average_trials(data, events):
         data_trialaveraged[i_ses] = np.array(data_trialaveraged[i_ses])[not_na]
         labels[i_ses] = np.array(labels[i_ses])[not_na]
 
+    print('data shape check:')
+    for d,l in zip(data_trialaveraged, labels):
+        print((d.shape, l.shape))
     return data_trialaveraged, labels
 
 def srm_transform(data, subjects):
