@@ -105,7 +105,7 @@ def average_trials(data, events):
 
 def srm_transform(data, subjects):
     data_srm = data.copy()
-    srm_dir = 'outputs/srm/'
+    srm_dir = '/scratch/users/csiyer/srm_outputs/'
     srm_files = glob.glob(srm_dir + '*transform*')
     for i,sub in enumerate(subjects):
         srm_transform = np.load([s for s in srm_files if sub in s][0])
