@@ -27,7 +27,9 @@ from joblib import Parallel, delayed
 from math import tanh 
 
 
-def get_rest_filenames(BIDS_DIR):
+def get_rest_filenames(local=False, BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI'):
+    if local:
+        BIDS_DIR = 'data'
     files = glob.glob(BIDS_DIR + '/**/*rest*optcomDenoised*.nii.gz', recursive = True)
     confounds_files = glob.glob(BIDS_DIR + '/**/*rest*confounds*.tsv', recursive = True)
     return files, confounds_files
@@ -56,8 +58,9 @@ def get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target='')
     atlas_resampled = resample_img(atlas.maps, target_shape = resample_target.shape[:3], target_affine = resample_target.affine, interpolation = 'nearest')
     return atlas.labels, atlas_resampled, math_img('img > 0', img=atlas_resampled)
 
-def get_combined_mask():
+def get_combined_mask(local=False):
     # this is the combined gray matter + parcellation mask that we use to load in the data
+    files, _ = get_rest_filenames(local) 
     gm_mask = get_gm_mask()
     _, _, parcel_mask = get_parcellation(atlas = 'schaefer', n_dimensions = 400, resample_target = nib.load(files[0])) 
     return math_img('img1 * img2', img1=gm_mask, img2=parcel_mask)
@@ -128,7 +131,7 @@ def compute_fc_one_session(voxel_data, parcel_data, zscore = True): # TO-DO: MAK
 
 if __name__ == "__main__":
 
-    files, confounds_files = get_rest_filenames(BIDS_DIR = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI') 
+    files, confounds_files = get_rest_filenames() 
     print('Shape/affine checks result: ', shape_affine_checks(files))
 
     subject_session_list = [(f[f.find('sub'):f.find('sub')+7], f[f.find('ses'):f.find('ses')+6]) for f in files]
