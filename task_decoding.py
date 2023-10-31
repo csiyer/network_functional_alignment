@@ -128,6 +128,8 @@ def loso_cv(data, labels, subjects):
             end_index = start_index + n_trials
             train_data[start_index:end_index,:] = data[loso_idx]
             train_labels = np.append(train_labels, labels[loso_idx])
+
+        print((train_data.shape, train_labels.shape))
             
         # fit support vector classifier
         classifier = LinearSVC(C = 1.0, loss='hinge') # this differs slightly from SVC(kernel = 'linear') but converges faster
@@ -171,9 +173,13 @@ def run_decoding():
     accuracies_nosrm = []
 
     for task in tasks:
+        print(f'starting {task}')
         data, events, subjects = load_data(task)
+        print(f'loaded data for {task}')
         data, labels = average_trials(data, events)
+        print(f'averaged data for {task}')
         data_srm = srm_transform(data, subjects)
+        print(f'srm\'d data for {task}')
 
         task_accuracies_srm = loso_cv(data_srm, labels, subjects)
         task_accuracies_nosrm = loso_cv(data, labels, subjects)
