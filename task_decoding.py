@@ -138,7 +138,10 @@ def loso_cv(data, labels, subjects):
         
         # fit support vector classifier
         classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
-        classifier = classifier.fit(train_data, train_labels)
+        try:
+            classifier = classifier.fit(train_data, train_labels)
+        except:
+            print(f'failed to fit classifier for {task}. Data length {train_data.shape[1]}')
 
         # Predict on the left out subject
         predicted_labels = classifier.predict(data[i])
