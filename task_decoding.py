@@ -31,6 +31,7 @@ from scipy import stats
 from sklearn.svm import LinearSVC
 import nibabel as nib
 from nilearn.maskers import MultiNiftiMasker
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 
 from connectivity import get_combined_mask
@@ -101,18 +102,18 @@ def average_trials(data, events):
         data_trialaveraged[i_ses] = np.array(data_trialaveraged[i_ses])[not_na]
         labels[i_ses] = np.array(labels[i_ses])[not_na]
 
-    print('data shape check:')
-    for d,l in zip(data_trialaveraged, labels):
-        print((d.shape, l.shape))
     return data_trialaveraged, labels
 
-def srm_transform(data, subjects):
+def srm_transform(data, subjects, zscore=True):
     data_srm = data.copy()
-    srm_dir = '/scratch/users/csiyer/srm_outputs/'
+    srm_dir = 'outputs/srm/'
     srm_files = glob.glob(srm_dir + '*transform*')
     for i,sub in enumerate(subjects):
         srm_transform = np.load([s for s in srm_files if sub in s][0])
         data_srm[i] = np.dot(data[i], srm_transform)
+        if zscore:
+            scaler = StandardScaler()
+            data_srm[i] = scaler.fit_transform(data_srm[i])
     return data_srm
 
 def loso_cv(data, labels, subjects):
@@ -124,7 +125,7 @@ def loso_cv(data, labels, subjects):
 
         # concatenate one huge training data matrix of samples x features (i.e. [trials x sessions] x voxels)
         n_trials, n_voxels = data[0].shape
-        train_data = np.zeros((n_trials*(len(subjects)-1), n_voxels))
+        train_data = np.zeros((n_trials*(len(loso_indices)), n_voxels))
         train_labels = np.array([])
         for j,loso_idx in enumerate(loso_indices):
             start_index = j*n_trials
@@ -133,9 +134,9 @@ def loso_cv(data, labels, subjects):
             train_labels = np.append(train_labels, labels[loso_idx])
 
         print((train_data.shape, train_labels.shape))
-            
+        
         # fit support vector classifier
-        classifier = LinearSVC(C = 1.0, loss='hinge') # this differs slightly from SVC(kernel = 'linear') but converges faster
+        classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
         classifier = classifier.fit(train_data, train_labels)
 
         # Predict on the left out subject
