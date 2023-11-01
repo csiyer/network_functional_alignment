@@ -18,6 +18,7 @@ Notes:
 
 Other ideas: 
 - Manipulate what data we derive the SRM from. Does GNG-based alignment help decode stop-signal data? Etc.
+    I don't think this works because the tasks are not stimulus-locked across subjects. So we couldn't derive SRM on raw task data.
 - Derive SRM from contrast maps instead of rest connectivity?
 
 Author: Chris Iyer
@@ -106,7 +107,7 @@ def average_trials(data, events):
 
 def srm_transform(data, subjects, zscore=True):
     data_srm = data.copy()
-    srm_dir = 'outputs/srm/'
+    srm_dir = '/scratch/users/csiyer/srm_outputs/'
     srm_files = glob.glob(srm_dir + '*transform*')
     for i,sub in enumerate(subjects):
         srm_transform = np.load([s for s in srm_files if sub in s][0])
