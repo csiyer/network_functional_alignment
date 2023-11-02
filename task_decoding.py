@@ -134,8 +134,7 @@ def loso_cv(data, labels, subjects):
             train_data[start_index:end_index,:] = data[loso_idx]
             train_labels = np.append(train_labels, labels[loso_idx])
 
-        print((train_data.shape, train_labels.shape))
-        
+        print(f'starting classification ({i})')
         # fit support vector classifier
         classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
         try:
@@ -174,6 +173,12 @@ def plot_accuracies(acc_srm, acc_nosrm, save=False):
     if save:
         plt.savefig('/scratch/users/csiyer/decoding_outputs/fig1')
 
+def na_check(data,subjects):
+    nas = []
+    for d,s in zip(data, subjects):
+        if len(np.where(np.isnan(data))[0]) > 0:
+            nas.append(s)
+    return nas
 
 def run_decoding():
     tasks = ['goNogo','shapeMatching','spatialTS','cuedTS','directedForgetting','flanker','nBack','stopSignal']
@@ -183,20 +188,26 @@ def run_decoding():
     for task in tasks:
         print(f'starting {task}')
         data, events, subjects = load_data(task)
-        print(f'loaded data for {task}')
-        data, labels = average_trials(data, events)
-        print(f'averaged data for {task}')
-        data_srm = srm_transform(data, subjects)
-        print(f'srm\'d data for {task}')
 
-        task_accuracies_srm = loso_cv(data_srm, labels, subjects)
-        task_accuracies_nosrm = loso_cv(data, labels, subjects)
+        nas = na_check(data, subjects)
+        if len(nas) == 0:
+            print(f'loaded data for {task}')
+            data, labels = average_trials(data, events)
+            print(f'averaged data for {task}')
+            data_srm = srm_transform(data, subjects)
+            print(f'srm\'d data for {task}')
 
-        print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
-        print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
+            task_accuracies_srm = loso_cv(data_srm, labels, subjects)
+            task_accuracies_nosrm = loso_cv(data, labels, subjects)
 
-        accuracies_srm.append(task_accuracies_srm)
-        accuracies_nosrm.append(task_accuracies_nosrm)
+            print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
+            print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
+
+            accuracies_srm.append(task_accuracies_srm)
+            accuracies_nosrm.append(task_accuracies_nosrm)
+        
+        else:
+            print(f'NAs found for {task}: {nas}')
 
     plot_accuracies(accuracies_srm, accuracies_nosrm, save=True)
     np.save(accuracies_srm, '/scratch/users/csiyer/decoding_outputs/acc_srm.npy')
