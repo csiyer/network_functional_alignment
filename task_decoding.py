@@ -188,10 +188,10 @@ def run_decoding():
     for task in tasks:
         print(f'starting {task}')
         data, events, subjects = load_data(task)
+        print(f'loaded data for {task}')
 
         nas = na_check(data, subjects)
         if len(nas) == 0:
-            print(f'loaded data for {task}')
             data, labels = average_trials(data, events)
             print(f'averaged data for {task}')
             data_srm = srm_transform(data, subjects)
