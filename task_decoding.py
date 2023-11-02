@@ -176,7 +176,7 @@ def plot_accuracies(acc_srm, acc_nosrm, save=False):
 def na_check(data,subjects):
     nas = []
     for d,s in zip(data, subjects):
-        if len(np.where(np.isnan(data))[0]) > 0:
+        if len(np.where(np.isnan(d))[0]) > 0:
             nas.append(s)
     return nas
 
