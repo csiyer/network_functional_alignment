@@ -125,10 +125,10 @@ def loso_cv(data, labels, subjects):
         loso_indices = [j for j,s in enumerate(subjects) if s != sub] # leave out one subject
 
         # concatenate one huge training data matrix of samples x features (i.e. [trials x sessions] x voxels)
-        n_trials, n_voxels = data[0].shape
-        train_data = np.zeros((n_trials*(len(loso_indices)), n_voxels))
+        train_data = np.zeros((n_trials*(len(loso_indices)), data[0].shape[1]))
         train_labels = np.array([])
         for j,loso_idx in enumerate(loso_indices):
+            n_trials = data[loso_idx].shape[0]
             start_index = j*n_trials
             end_index = start_index + n_trials
             train_data[start_index:end_index,:] = data[loso_idx]
