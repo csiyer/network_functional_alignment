@@ -125,7 +125,9 @@ def loso_cv(data, labels, subjects):
         loso_indices = [j for j,s in enumerate(subjects) if s != sub] # leave out one subject
 
         # concatenate one huge training data matrix of samples x features (i.e. [trials x sessions] x voxels)
-        train_data = np.zeros((n_trials*(len(loso_indices)), data[0].shape[1]))
+        n_voxels = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
+        n_trials_total = sum(d.shape[0] for d in data) # cant do data[0].shape[0] because some weird sessions have diff # trials
+        train_data = np.zeros((n_trials_total, n_voxels)) # np.zeros((n_trials*(len(loso_indices)), n_voxels))
         train_labels = np.array([])
         for j,loso_idx in enumerate(loso_indices):
             n_trials = data[loso_idx].shape[0]
