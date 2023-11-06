@@ -106,15 +106,15 @@ def average_trials(data, events):
     return data_trialaveraged, labels
 
 def srm_transform(data, subjects, zscore=True):
-    data_srm = data.copy()
+    data_srm = []
     srm_dir = '/scratch/users/csiyer/srm_outputs/'
     srm_files = glob.glob(srm_dir + '*transform*')
     for i,sub in enumerate(subjects):
         srm_transform = np.load([s for s in srm_files if sub in s][0])
-        data_srm[i] = np.dot(data[i], srm_transform)
+        curr = np.dot(data[i], srm_transform)
         if zscore:
-            scaler = StandardScaler()
-            data_srm[i] = scaler.fit_transform(data_srm[i])
+            curr = StandardScaler().fit_transform(curr)
+        data_srm.append(curr)
     return data_srm
 
 def loso_cv(data, labels, subjects):
@@ -209,6 +209,8 @@ def run_decoding():
         
         else:
             print(f'NAs found for {task}: {nas}')
+
+        del data, data_srm, events, subjects, labels
 
     plot_accuracies(accuracies_srm, accuracies_nosrm, save=True)
     np.save(accuracies_srm, '/scratch/users/csiyer/decoding_outputs/acc_srm.npy')
