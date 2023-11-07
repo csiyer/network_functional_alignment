@@ -107,10 +107,25 @@ def average_trials(data, events):
 
 
 def label_trs(data, events):
-    """
-    Alternative for the function above. Instead of averaging TRs within each trial, this just assigns each existing TR a trial label.
-    """
+    """Alternative for the function above. Instead of averaging TRs within each trial, this just assigns each existing TR a trial label.
+    Then, eliminates NA trials from data and labels"""
+    
+    hrf_lag = 4.5
+    def tr_to_time(tr): # for the Nth tr, from which timepoint does this TR contain brain information?
+        return tr*1.49 - hrf_lag
+    
+    def find_active_trial(tr,e): # for a given time, what was the active trial?
+        time = tr_to_time(tr)
+        if time < e.onset.iloc[0] or time > e.onset.iloc[-1] + 6:
+            return None
+        else:
+            return e.trial_type.iloc[e.onset[e.onset <= time].idxmax()]
+        
+    labels = [np.array([find_active_trial(i,e) for i in range(d.shape[0])]) for d, e in zip(data, events)]
+    data_trimmed = [d[np.where(l != None)] for d,l in zip(data, labels)]
+    labels = [l[np.where(l != None)] for l in labels]
 
+    return data_trimmed, labels
 
 
 def srm_transform(data, subjects, zscore=True):
@@ -201,11 +216,11 @@ def run_decoding():
 
         # nas = na_check(data, subjects)
         # data, labels = average_trials(data, events)
-        labels = label_trs(data, events)
-        print(f'obtained labels for {task}')
+        data, labels = label_trs(data, events)
+        print(f'labeled {task}')
 
         data_srm = srm_transform(data, subjects)
-        print(f'srm\'d data for {task}')
+        print(f'srm\'d  {task}')
 
         task_accuracies_srm = loso_cv(data_srm, labels, subjects)
         task_accuracies_nosrm = loso_cv(data, labels, subjects)
