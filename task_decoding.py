@@ -105,6 +105,14 @@ def average_trials(data, events):
 
     return data_trialaveraged, labels
 
+
+def label_trs(data, events):
+    """
+    Alternative for the function above. Instead of averaging TRs within each trial, this just assigns each existing TR a trial label.
+    """
+
+
+
 def srm_transform(data, subjects, zscore=True):
     data_srm = []
     srm_dir = '/scratch/users/csiyer/srm_outputs/'
@@ -191,30 +199,28 @@ def run_decoding():
         data, events, subjects = load_data(task)
         print(f'loaded data for {task}')
 
-        nas = na_check(data, subjects)
-        if len(nas) == 0:
-            data, labels = average_trials(data, events)
-            print(f'averaged data for {task}')
-            data_srm = srm_transform(data, subjects)
-            print(f'srm\'d data for {task}')
+        # nas = na_check(data, subjects)
+        # data, labels = average_trials(data, events)
+        labels = label_trs(data, events)
+        print(f'obtained labels for {task}')
 
-            task_accuracies_srm = loso_cv(data_srm, labels, subjects)
-            task_accuracies_nosrm = loso_cv(data, labels, subjects)
+        data_srm = srm_transform(data, subjects)
+        print(f'srm\'d data for {task}')
 
-            print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
-            print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
+        task_accuracies_srm = loso_cv(data_srm, labels, subjects)
+        task_accuracies_nosrm = loso_cv(data, labels, subjects)
 
-            accuracies_srm.append(task_accuracies_srm)
-            accuracies_nosrm.append(task_accuracies_nosrm)
-        
-        else:
-            print(f'NAs found for {task}: {nas}')
+        print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
+        print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
+
+        accuracies_srm.append(task_accuracies_srm)
+        accuracies_nosrm.append(task_accuracies_nosrm)
 
         del data, data_srm, events, subjects, labels
 
     plot_accuracies(accuracies_srm, accuracies_nosrm, save=True)
-    np.save(accuracies_srm, '/scratch/users/csiyer/decoding_outputs/acc_srm.npy')
-    np.save(accuracies_nosrm, '/scratch/users/csiyer/decoding_outputs/acc_nosrm.npy')
+    np.save('/scratch/users/csiyer/decoding_outputs/acc_srm.npy', accuracies_srm)
+    np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm.npy', accuracies_nosrm)
 
     return accuracies_srm, accuracies_nosrm
 
