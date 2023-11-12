@@ -18,4 +18,5 @@ conda activate fa
 # python3 connectivity.py
 # python3 connectome_average.py # also handled by reliability.ipynb
 # python3 srm.py
-python3 task_decoding.py
+# python3 task_decoding.py
+python3 load_srm_data.py
