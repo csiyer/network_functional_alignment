@@ -141,15 +141,14 @@ def srm_transform(data, subjects, zscore=True):
     return data_srm
 
 def loso_cv(data, labels, subjects):
-
     accuracies = np.zeros(len(np.unique(subjects))) # one for each left-out subject
-    
+
     for i,sub in enumerate(np.unique(subjects)):
         loso_indices = [j for j,s in enumerate(subjects) if s != sub] # leave out one subject
 
         # concatenate one huge training data matrix of samples x features (i.e. [trials x sessions] x voxels)
         n_voxels = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
-        n_trials_total = sum(d.shape[0] for d in data[loso_indices]) # cant do data[0].shape[0] because some weird sessions have diff # trials
+        n_trials_total = sum([d.shape[0] for k,d in enumerate(data) if k in loso_indices]) # cant do data[0].shape[0] because some weird sessions have diff # trials
         train_data = np.zeros((n_trials_total, n_voxels)) # np.zeros((n_trials*(len(loso_indices)), n_voxels))
         train_labels = np.array([])
         for j,loso_idx in enumerate(loso_indices):
@@ -169,7 +168,7 @@ def loso_cv(data, labels, subjects):
             accuracies[i] = sum(predicted_labels == labels[i])/len(predicted_labels)
         except:
             print(f'failed to fit classifier. Data length {train_data.shape[1]}')
-
+            
     return accuracies
 
 def plot_accuracies(acc_srm, acc_nosrm, save=False):
