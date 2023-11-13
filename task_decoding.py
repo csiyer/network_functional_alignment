@@ -168,7 +168,7 @@ def loso_cv(data, labels, subjects):
             accuracies[i] = sum(predicted_labels == labels[i])/len(predicted_labels)
         except:
             print(f'failed to fit classifier. Data length {train_data.shape[1]}')
-            
+
     return accuracies
 
 def plot_accuracies(acc_srm, acc_nosrm, save=False):
@@ -204,7 +204,7 @@ def na_check(data,subjects):
     return nas
 
 def run_decoding():
-    tasks = ['goNogo','shapeMatching','spatialTS','cuedTS','directedForgetting','flanker','nBack','stopSignal']
+    tasks = ['goNogo','shapeMatching','spatialTS','cuedTS','flanker','stopSignal','nBack','directedForgetting']
     accuracies_srm = []
     accuracies_nosrm = []
 
