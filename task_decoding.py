@@ -10,16 +10,10 @@ which we average to get an accuracy score for that fold. Finally, accuracies are
 Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
 neural signatures of these cognitive control tasks are.
 
-Notes:
-- Currently, the TRs corresponding to each trial are averaged, and this average image is the basis of trial type prediction. 
-    We could change this to decode each TR, or to do something more advanced like decode on GLM outputs.
-- NEXT STEP:
-    Differentiate trial types based on behavioral outcome (correct/incorrect response)
-
-Other ideas: 
-- Manipulate what data we derive the SRM from. Does GNG-based alignment help decode stop-signal data? Etc.
-    I don't think this works because the tasks are not stimulus-locked across subjects. So we couldn't derive SRM on raw task data.
-- Derive SRM from contrast maps instead of rest connectivity?
+NEXT STEPS:
+    - Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
+        in order to decode trial-level beta maps instead of raw data????
+    - Differentiate trial types based on behavioral outcome (correct/incorrect response)
 
 Author: Chris Iyer
 Updated: 10/30/23
@@ -172,30 +166,38 @@ def loso_cv(data, labels, subjects):
 
     return accuracies
 
-def plot_accuracies(acc_srm, acc_nosrm, save=False):
-    tasks = ['goNogo','shapeMatching','spatialTS','cuedTS','directedForgetting','flanker','nBack','stopSignal']
 
+def plot_accuracies(tasks, acc_srm, acc_nosrm, save=False):
+    task_chance = {
+        'goNogo': 1/2,
+        'shapeMatching': 1/7,
+        'spatialTS': 1/4,
+        'cuedTS': 1/4,
+        'flanker': 1/2,
+        'stopSignal': 1/3,
+        'nBack': 1/2,
+        'directedForgetting': 1/4
+    }
     bar_width = 0.25
     x = np.arange(len(tasks))
-
     fig, ax = plt.subplots(1,1, figsize = (10,5))
     fig.suptitle('Trial-by-trial task decoding, SRM-transformed vs. MNI-only')
-    for i in range(len(tasks)):
+    for i,task in enumerate(tasks):
         x_pair = [x[i] - bar_width/2, x[i]+bar_width/2]
-        ax.bar(x_pair, [np.mean(acc_srm), np.mean(acc_nosrm)], 
-            yerr = [np.std(acc_srm), np.std(acc_nosrm)],
-            width=bar_width, label = ['SRM-transformed', 'MNI only'], color = ['red', 'blue'], alpha = 0.5, capsize=2)
-
+        ax.bar(x_pair, [np.mean(acc_srm[i]), np.mean(acc_nosrm[i])], 
+            yerr = [np.std(acc_srm[i]), np.std(acc_nosrm[i])],
+            width=bar_width, label = ['SRM-transformed', 'MNI only'], color = ['green', 'blue'], alpha = 0.5, capsize=2)
+        x_pair = [x[i] - bar_width*1.5, x[i]+bar_width*1.5]
+        ax.hlines(task_chance[task], xmin = x_pair[0], xmax = x_pair[1], color='red', linestyle='--')
     ax.set_xlabel('Tasks')
     ax.set_xticks(x)
     ax.set_xticklabels(tasks)
     ax.set_ylabel('Leave-one-subject-out cross-validation accuracy')
     ax.set_ylim(0,1)
     ax.legend(['SRM-transformed', 'MNI only'],  loc='lower right')
-
     plt.show()
     if save:
-        plt.savefig('/scratch/users/csiyer/decoding_outputs/fig1')
+        plt.savefig('/scratch/users/csiyer/decoding_outputs/accuracy_plot')
 
 def na_check(data,subjects):
     nas = []
@@ -233,7 +235,7 @@ def run_decoding():
 
         del data, data_srm, events, subjects, labels
 
-    plot_accuracies(accuracies_srm, accuracies_nosrm, save=True)
+    plot_accuracies(tasks, accuracies_srm, accuracies_nosrm, save=True)
     np.save('/scratch/users/csiyer/decoding_outputs/acc_srm.npy', accuracies_srm)
     np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm.npy', accuracies_nosrm)
 
