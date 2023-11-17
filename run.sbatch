@@ -4,7 +4,7 @@
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=6G
-#SBATCH -p bigmem
+#SBATCH -p russpold
 # Outputs ---------------------------------
 #SBATCH -o  log.out
 #SBATCH -e log.err
