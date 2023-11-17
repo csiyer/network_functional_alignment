@@ -28,6 +28,7 @@ import nibabel as nib
 from nilearn.maskers import MultiNiftiMasker
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
+from joblib import Parallel, delayed
 
 from connectivity import get_combined_mask
 
@@ -135,34 +136,37 @@ def srm_transform(data, subjects, zscore=True):
     return data_srm
 
 def loso_cv(data, labels, subjects):
-    accuracies = np.zeros(len(np.unique(subjects))) # one for each left-out subject
 
-    for i,sub in enumerate(np.unique(subjects)):
-        loso_indices = [j for j,s in enumerate(subjects) if s != sub] # leave out one subject
-        
-        # concatanete one big training matrix of shape samples x features (trials x voxels)
-        n_voxels = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
-        n_trials_total = sum([d.shape[0] for k,d in enumerate(data) if k in loso_indices]) # cant do data[0].shape[0] because some weird sessions have diff # trials
-        train_data = np.zeros((n_trials_total, n_voxels)) # np.zeros((n_trials*(len(loso_indices)), n_voxels))
+    def concatenate_data_labels(idxs):
+        n_features = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
+        n_trials_total = sum([d.shape[0] for k,d in enumerate(data) if k in idxs]) # cant do data[0].shape[0] because some weird sessions have diff # trials
+        train_data = np.zeros((n_trials_total, n_features)) # np.zeros((n_trials*(len(loso_indices)), n_voxels))
         train_labels = np.array([])
         start_index = 0 # initialize
-        for j,loso_idx in enumerate(loso_indices):
-            n_trials = data[loso_idx].shape[0]
+        for idx in idxs:
+            n_trials = data[idx].shape[0]
             end_index = start_index + n_trials
-            train_data[start_index:end_index,:] = data[loso_idx]
-            train_labels = np.append(train_labels, labels[loso_idx])
+            train_data[start_index:end_index,:] = data[idx]
+            train_labels = np.append(train_labels, labels[idx])
             start_index += n_trials
+        return train_data, train_labels 
 
-        print(f'starting classification ({i})')
-        # fit support vector classifier
+    def predict_left_out_subject(sub):
+        sub_indices = [j for j,s in enumerate(subjects) if s == sub]
+        loso_indices = [j for j,s in enumerate(subjects) if s != sub]
+        
+        train_data, train_labels = concatenate_data_labels(loso_indices)
+        test_data, test_labels = concatenate_data_labels(sub_indices)
+
         classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
-        try:
-            classifier = classifier.fit(train_data, train_labels)
-            # Predict on the left out subject
-            predicted_labels = classifier.predict(data[i])
-            accuracies[i] = sum(predicted_labels == labels[i])/len(predicted_labels)
-        except:
-            print(f'failed to fit classifier. Data length {train_data.shape[1]}')
+        classifier = classifier.fit(train_data, train_labels)
+        predicted_labels = classifier.predict(test_data)
+        acc = sum(predicted_labels == test_labels)/len(predicted_labels)
+        return acc 
+
+    accuracies = Parallel(n_jobs = len(np.unique(subjects)))( # 
+        delayed(predict_left_out_subject)(sub) for sub in np.unique(subjects)
+    )
 
     return accuracies
 
@@ -233,11 +237,14 @@ def run_decoding():
         accuracies_srm.append(task_accuracies_srm)
         accuracies_nosrm.append(task_accuracies_nosrm)
 
+        np.save('/scratch/users/csiyer/decoding_outputs/acc_srm_progress.npy', accuracies_srm)
+        np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm_progress.npy', accuracies_nosrm)
+
         del data, data_srm, events, subjects, labels
 
+    np.save('/scratch/users/csiyer/decoding_outputs/acc_srm_final.npy', accuracies_srm)
+    np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm_final.npy', accuracies_nosrm)
     plot_accuracies(tasks, accuracies_srm, accuracies_nosrm, save=True)
-    np.save('/scratch/users/csiyer/decoding_outputs/acc_srm.npy', accuracies_srm)
-    np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm.npy', accuracies_nosrm)
 
     return accuracies_srm, accuracies_nosrm
 
