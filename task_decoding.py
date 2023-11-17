@@ -137,7 +137,7 @@ def srm_transform(data, subjects, zscore=True):
 
 def loso_cv(data, labels, subjects):
 
-    def concatenate_data_labels(idxs):
+    def concatenate_data_labels(idxs): # one giant matrix concatenating trials across subjects/sessions. this fxn is called in the one below.
         n_features = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
         n_trials_total = sum([d.shape[0] for k,d in enumerate(data) if k in idxs]) # cant do data[0].shape[0] because some weird sessions have diff # trials
         train_data = np.zeros((n_trials_total, n_features)) # np.zeros((n_trials*(len(loso_indices)), n_voxels))
@@ -151,7 +151,7 @@ def loso_cv(data, labels, subjects):
             start_index += n_trials
         return train_data, train_labels 
 
-    def predict_left_out_subject(sub):
+    def predict_left_out_subject(sub): # train on all but one sub, test on that sub. this fxn is called in the parallel loop.
         sub_indices = [j for j,s in enumerate(subjects) if s == sub]
         loso_indices = [j for j,s in enumerate(subjects) if s != sub]
         
