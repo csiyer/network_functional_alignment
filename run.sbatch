@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH -J network_connectivity_csi
-#SBATCH --time=10:00:00
+#SBATCH --time=23:00:00
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=6G
+#SBATCH --mem-per-cpu=4G
 #SBATCH -p russpold
 # Outputs ---------------------------------
 #SBATCH -o  log.out

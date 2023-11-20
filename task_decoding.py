@@ -44,10 +44,10 @@ def load_data(task):
     """
     bids_dir = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI'
 
-    data_files = glob.glob(bids_dir + f'/**/*{task}*optcomDenoised*nii.gz', recursive=True) # should be ~25 (5 subjects x 5ish sessions each)
-    # confound_files = glob.glob(bids_dir + f'/**/*{task}*confounds*', recursive=True) 
-    event_files = glob.glob(bids_dir + f'/**/*{task}*events*', recursive=True)
-
+    data_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*optcomDenoised_bold.nii.gz', recursive=True) if 'ses-11' not in f and 'ses-12' not in f]
+    # confound_files = glob.glob(bids_dir + f'/**/*{task}*confounds*', recursive=True)
+    event_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*events*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] 
+    
     data = MultiNiftiMasker(
         mask_img = get_combined_mask(), # mask where it's gray matter above 50% and the parcellation applies
         standardize = 'zscore_sample',
