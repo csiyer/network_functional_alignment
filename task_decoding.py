@@ -211,7 +211,7 @@ def na_check(data,subjects):
     return nas
 
 def run_decoding():
-    tasks = ['goNogo','shapeMatching','spatialTS','cuedTS','flanker','stopSignal','nBack','directedForgetting']
+    tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
     accuracies_srm = []
     accuracies_nosrm = []
 
