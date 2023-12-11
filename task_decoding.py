@@ -1,25 +1,24 @@
 """
-Here, we take the subject voxel-to-feature transformation matrices derived in srm.py 
-to transform task data into the shared space.
+Here, we use transformation matrices from srm.py to transform task data into the shared space.
 
-Then, we decode trial conditions (e.g., congruent vs. incongruent, go vs. no-go) between subjects using leave-one-subject-out cross-validation,
-with and without the SRM transformation. In other words, a classifier is trained on SRM-transformed data from all sessions of all
-other subjects on a given task. Then, for each trial of the left-out subjects 5 repetitions of that task, it produces a prediction for each trial,
-which we average to get an accuracy score for that fold. Finally, accuracies are averaged across folds/left-out subjects.
+Then, we decode trial conditions (e.g., congruent vs. incongruent; see full condition list below) 
+between subjects using leave-one-subject-out cross-validation, with and without the SRM transformation. 
+In each fold, all of one subject's sessions are excluded from the training set and tested on, using classifiers trained
+on either SRM'd or raw data from all other subjects. Each TR is classified according to its trial condition.
 
 Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
 neural signatures of these cognitive control tasks are.
 
 NEXT STEPS:
     - Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
-        in order to decode trial-level beta maps instead of raw data????
+        in order to decode trial-level beta maps instead of raw data?
     - Differentiate trial types based on behavioral outcome (correct/incorrect response)
 
 Author: Chris Iyer
-Updated: 10/30/23
+Updated: 12/11/23
 """
 
-import glob
+import glob, json
 import numpy as np
 import pandas as pd
 from scipy import stats
@@ -31,7 +30,6 @@ import matplotlib.pyplot as plt
 from joblib import Parallel, delayed
 
 from connectivity import get_combined_mask
-
 # /oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI
 
 def load_data(task):
@@ -101,10 +99,15 @@ def average_trials(data, events):
     return data_trialaveraged, labels
 
 
-def label_trs(data, events):
-    """Alternative for the function above. Instead of averaging TRs within each trial, this just assigns each existing TR a trial label.
-    Then, eliminates NA trials from data and labels"""
-    
+def label_trs(data, events, task, correct_only=False):
+    """
+    Instead of averaging TRs within each trial, this assigns each TR a trial label.
+    Uses task_decoding_condition.json to define the trials that we keep / label. (eliminates NAs and irrelevant trials)
+    correct_only filters for only trials with correct responses.
+    """
+    with open('utils/task_decoding_conditions.json', 'r') as file:
+        task_conditions = eval(file.read())
+
     hrf_lag = 4.5
     def tr_to_time(tr): # for the Nth tr, from which timepoint does this TR contain brain information?
         return tr*1.49 - hrf_lag
@@ -114,10 +117,17 @@ def label_trs(data, events):
         if time < e.onset.iloc[0] or time > e.onset.iloc[-1] + 6:
             return None
         else:
-            return e.trial_type.iloc[e.onset[e.onset <= time].idxmax()]
+            trial_num = e.onset[e.onset <= time].idxmax()
+            trial_type = e[task_conditions[task]['colname']].iloc[trial_num]
+            correct = e.correct_response.iloc[trial_num] == e.key_press.iloc[trial_num]
+            if (correct_only and not correct) or (trial_type not in task_conditions[task]['values']): # either incorrect trial or excluded trial type
+                return None
+            return task_conditions[task]['values'][trial_type]
         
     labels = [np.array([find_active_trial(i,e) for i in range(d.shape[0])]) for d, e in zip(data, events)]
-    data_trimmed = [d[np.where(l != None)] for d,l in zip(data, labels)]
+    
+    # remove NA/excluded trials
+    data_trimmed = [d[np.where(l != None)] for d,l in zip(data, labels)] 
     labels = [l[np.where(l != None)] for l in labels]
 
     return data_trimmed, labels
@@ -134,6 +144,7 @@ def srm_transform(data, subjects, zscore=True):
             curr = StandardScaler().fit_transform(curr)
         data_srm.append(curr)
     return data_srm
+
 
 def loso_cv(data, labels, subjects):
 
@@ -203,30 +214,21 @@ def plot_accuracies(tasks, acc_srm, acc_nosrm, save=False):
     if save:
         plt.savefig('/scratch/users/csiyer/decoding_outputs/accuracy_plot')
 
-def na_check(data,subjects):
-    nas = []
-    for d,s in zip(data, subjects):
-        if len(np.where(np.isnan(d))[0]) > 0:
-            nas.append(s)
-    return nas
 
 def run_decoding():
     tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
-    accuracies_srm = []
-    accuracies_nosrm = []
+    results_srm = []
+    results_nosrm = []
 
     for task in tasks:
         print(f'starting {task}')
         data, events, subjects = load_data(task)
         print(f'loaded data for {task}')
 
-        # nas = na_check(data, subjects)
         # data, labels = average_trials(data, events)
-        data, labels = label_trs(data, events)
-        print(f'labeled {task}')
-
+        data, labels = label_trs(data, events, task, correct_only=False)
         data_srm = srm_transform(data, subjects)
-        print(f'srm\'d  {task}')
+        print(f'labeled and srm\'d  {task}')
 
         task_accuracies_srm = loso_cv(data_srm, labels, subjects)
         task_accuracies_nosrm = loso_cv(data, labels, subjects)
@@ -234,12 +236,9 @@ def run_decoding():
         print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
         print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
 
-        accuracies_srm.append(task_accuracies_srm)
-        accuracies_nosrm.append(task_accuracies_nosrm)
-
-        np.save('/scratch/users/csiyer/decoding_outputs/acc_srm_progress.npy', accuracies_srm)
-        np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm_progress.npy', accuracies_nosrm)
-
+        results_srm.append(task_accuracies_srm)
+        results_nosrm.append(task_accuracies_nosrm)
+        
         del data, data_srm, events, subjects, labels
 
     np.save('/scratch/users/csiyer/decoding_outputs/acc_srm_final.npy', accuracies_srm)

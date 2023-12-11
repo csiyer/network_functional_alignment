@@ -23,7 +23,7 @@ import numpy as np
 import nibabel as nib
 from nilearn.image import math_img
 from connectivity import get_gm_mask, get_parcellation
-from utils.brainiak import srm
+from utils.brainiak import srm_brainiak as srm
 from joblib import Parallel, delayed
 
 def load_avg_connectomes():
