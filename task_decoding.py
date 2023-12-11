@@ -238,14 +238,12 @@ def run_decoding():
 
         results_srm.append(task_accuracies_srm)
         results_nosrm.append(task_accuracies_nosrm)
-        
+
         del data, data_srm, events, subjects, labels
 
-    np.save('/scratch/users/csiyer/decoding_outputs/acc_srm_final.npy', accuracies_srm)
-    np.save('/scratch/users/csiyer/decoding_outputs/acc_nosrm_final.npy', accuracies_nosrm)
-    plot_accuracies(tasks, accuracies_srm, accuracies_nosrm, save=True)
-
-    return accuracies_srm, accuracies_nosrm
+    np.save('/scratch/users/csiyer/decoding_outputs/results_srm_final.npy', results_srm)
+    np.save('/scratch/users/csiyer/decoding_outputs/results_nosrm_final.npy', results_nosrm)
+    plot_accuracies(tasks, results_srm, results_nosrm, save=True)
 
 
 if __name__ == "__main__":
