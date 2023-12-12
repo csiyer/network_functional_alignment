@@ -21,12 +21,14 @@ Updated: 12/11/23
 import glob, json
 import numpy as np
 import pandas as pd
-from scipy import stats
-from sklearn.svm import LinearSVC
 import nibabel as nib
 from nilearn.maskers import MultiNiftiMasker
 from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
+from sklearn.metrics import roc_auc_score, confusion_matrix
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 from joblib import Parallel, delayed
 
 from connectivity import get_combined_mask
@@ -170,55 +172,55 @@ def loso_cv(data, labels, subjects):
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
         classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
+        # CONSIDER: classifier = LogisticRegression(penalty = 'l2', C = 1.0, dual = True)
         classifier = classifier.fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
-        acc = sum(predicted_labels == test_labels)/len(predicted_labels)
-        return acc 
+        predicted_probs = classifier._predict_proba_lr(test_data)
+        auc = roc_auc_score(y_true = test_labels, y_score = predicted_probs, multi_class='ovr', average='micro')
+        cm = confusion_matrix(test_labels, predicted_labels)
+        
+        return auc, cm
 
-    accuracies = Parallel(n_jobs = len(np.unique(subjects)))( # 
+    auc_cm = Parallel(n_jobs = min(len(np.unique(subjects)), 32))( # 
         delayed(predict_left_out_subject)(sub) for sub in np.unique(subjects)
     )
 
-    return accuracies
+    aucs = [s[0] for s in auc_cm]
+    cms = [s[1] for s in auc_cm]
+    return aucs, cms
 
 
-def plot_accuracies(tasks, acc_srm, acc_nosrm, save=False):
-    task_chance = {
-        'goNogo': 1/2,
-        'shapeMatching': 1/7,
-        'spatialTS': 1/4,
-        'cuedTS': 1/4,
-        'flanker': 1/2,
-        'stopSignal': 1/3,
-        'nBack': 1/2,
-        'directedForgetting': 1/4
-    }
+def plot_performance(tasks, acc_srm, acc_nosrm, save=False):
     bar_width = 0.25
     x = np.arange(len(tasks))
     fig, ax = plt.subplots(1,1, figsize = (10,5))
     fig.suptitle('Trial-by-trial task decoding, SRM-transformed vs. MNI-only')
-    for i,task in enumerate(tasks):
+    for i in range(len(tasks)):
         x_pair = [x[i] - bar_width/2, x[i]+bar_width/2]
         ax.bar(x_pair, [np.mean(acc_srm[i]), np.mean(acc_nosrm[i])], 
             yerr = [np.std(acc_srm[i]), np.std(acc_nosrm[i])],
             width=bar_width, label = ['SRM-transformed', 'MNI only'], color = ['green', 'blue'], alpha = 0.5, capsize=2)
-        x_pair = [x[i] - bar_width*1.5, x[i]+bar_width*1.5]
-        ax.hlines(task_chance[task], xmin = x_pair[0], xmax = x_pair[1], color='red', linestyle='--')
+        # x_pair = [x[i] - bar_width*1.5, x[i]+bar_width*1.5]
+        # ax.hlines(task_chance[task], xmin = x_pair[0], xmax = x_pair[1], color='red', linestyle='--')
+    
+    ax.axhline(0.5, color='red', linestyle='--', alpha = 0.4, label = 'chance')
     ax.set_xlabel('Tasks')
     ax.set_xticks(x)
-    ax.set_xticklabels(tasks)
-    ax.set_ylabel('Leave-one-subject-out cross-validation accuracy')
+    ax.set_xticklabels(tasks, rotation = 30)
+    ax.set_ylabel('Leave-one-subject-out classifier ROC-AUC')
     ax.set_ylim(0,1)
-    ax.legend(['SRM-transformed', 'MNI only'],  loc='lower right')
+    custom_legend = [Patch(color='green', alpha=0.5),  # Green rectangle for 'SRM-transformed'
+                    Patch(color='blue', alpha=0.5),   # Blue rectangle for 'MNI only'
+                    Line2D([0], [0], color='red', linestyle='--', alpha=0.4)]  # Dashed red line for 'chance'
+    ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig('/scratch/users/csiyer/decoding_outputs/accuracy_plot')
+        plt.savefig('/scratch/users/csiyer/decoding_outputs/performance_plot')
 
 
 def run_decoding():
     tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
-    results_srm = []
-    results_nosrm = []
+    aucs_srm, cms_srm, aucs_nosrm, cms_nosrm = ([],[],[],[])
 
     for task in tasks:
         print(f'starting {task}')
@@ -226,24 +228,22 @@ def run_decoding():
         print(f'loaded data for {task}')
 
         # data, labels = average_trials(data, events)
-        data, labels = label_trs(data, events, task, correct_only=False)
+        data, labels = label_trs(data, events, task, correct_only=False) # CHANGE THIS TO FILTER ONLY CORRECT TRIALS
         data_srm = srm_transform(data, subjects)
         print(f'labeled and srm\'d  {task}')
 
-        task_accuracies_srm = loso_cv(data_srm, labels, subjects)
-        task_accuracies_nosrm = loso_cv(data, labels, subjects)
+        task_aucs_srm, task_cms_srm = loso_cv(data_srm, labels, subjects)
+        task_aucs_nosrm, task_cms_nosrm = loso_cv(data, labels, subjects)
 
-        print(f'For {task}, the average LOSO-CV accuracy with SRM is {np.mean(task_accuracies_srm)}')
-        print(f'For {task}, the average LOSO-CV accuracy with NO SRM is {np.mean(task_accuracies_nosrm)}')
-
-        results_srm.append(task_accuracies_srm)
-        results_nosrm.append(task_accuracies_nosrm)
+        aucs_srm.append(task_aucs_srm)
+        cms_srm.append(task_cms_srm)
+        aucs_nosrm.append(task_aucs_nosrm)
+        cms_nosrm.append(task_cms_nosrm)
 
         del data, data_srm, events, subjects, labels
 
-    np.save('/scratch/users/csiyer/decoding_outputs/results_srm_final.npy', results_srm)
-    np.save('/scratch/users/csiyer/decoding_outputs/results_nosrm_final.npy', results_nosrm)
-    plot_accuracies(tasks, results_srm, results_nosrm, save=True)
+    np.savez('/scratch/users/csiyer/decoding_outputs/classifier_results.npy', aucs_srm = aucs_srm, aucs_nosrm = aucs_nosrm, cms_srm = cms_srm, cms_nosrm = cms_nosrm)
+    plot_performance(tasks, aucs_srm, aucs_nosrm, save=True)
 
 
 if __name__ == "__main__":
