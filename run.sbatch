@@ -3,7 +3,7 @@
 #SBATCH --time=23:00:00
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=7.5G
+#SBATCH --mem-per-cpu=7G
 #SBATCH -p russpold
 # Outputs ---------------------------------
 #SBATCH -o  log.out
