@@ -18,7 +18,7 @@ Author: Chris Iyer
 Updated: 12/11/23
 """
 
-import glob, json
+import glob
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -171,17 +171,18 @@ def loso_cv(data, labels, subjects):
         train_data, train_labels = concatenate_data_labels(loso_indices)
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
-        classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto') # this differs slightly from SVC(kernel = 'linear') but converges faster
-        # CONSIDER: classifier = LogisticRegression(penalty = 'l2', C = 1.0, dual = True)
-        classifier = classifier.fit(train_data, train_labels)
+        classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto').fit(train_data, train_labels) # this differs slightly from SVC(kernel = 'linear') but converges faster
+        # CONSIDER: classifier = LogisticRegression(penalty = 'l2', C = 1.0, dual = True, solver='liblinear').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
         predicted_probs = classifier._predict_proba_lr(test_data)
+        if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
+            predicted_probs = np.max(predicted_probs, axis=1)
+
         auc = roc_auc_score(y_true = test_labels, y_score = predicted_probs, multi_class='ovr', average='micro')
         cm = confusion_matrix(test_labels, predicted_labels)
-        
         return auc, cm
 
-    auc_cm = Parallel(n_jobs = min(len(np.unique(subjects)), 32))( # 
+    auc_cm = Parallel(n_jobs = min(len(np.unique(subjects)), 32) )( 
         delayed(predict_left_out_subject)(sub) for sub in np.unique(subjects)
     )
 
