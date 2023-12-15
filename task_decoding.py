@@ -226,7 +226,7 @@ def run_decoding():
     for task in tasks:
         print(f'starting {task}')
         data, events, subjects = load_data(task)
-        print(f'loaded data for {task}')
+        print(f'loaded {len(data)} data files for {task}')
 
         # data, labels = average_trials(data, events)
         data, labels = label_trs(data, events, task, correct_only=False) # CHANGE THIS TO FILTER ONLY CORRECT TRIALS
