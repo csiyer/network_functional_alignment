@@ -18,7 +18,7 @@ Author: Chris Iyer
 Updated: 12/11/23
 """
 
-import glob
+import glob, pickle
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -191,7 +191,10 @@ def loso_cv(data, labels, subjects):
     return aucs, cms
 
 
-def plot_performance(tasks, acc_srm, acc_nosrm, save=False):
+def plot_performance(tasks, results, save=False):
+    acc_srm = results['aucs_srm']
+    acc_nosrm = results['aucs_nosrm']
+
     bar_width = 0.25
     x = np.arange(len(tasks))
     fig, ax = plt.subplots(1,1, figsize = (10,5))
@@ -221,7 +224,12 @@ def plot_performance(tasks, acc_srm, acc_nosrm, save=False):
 
 def run_decoding():
     tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
-    aucs_srm, cms_srm, aucs_nosrm, cms_nosrm = ([],[],[],[])
+    results = {
+        'aucs_srm' : [],
+        'aucs_nosrm' : [],
+        'cms_srm' : [],
+        'cms_nosrm' : []
+    }
 
     for task in tasks:
         print(f'starting {task}')
@@ -236,15 +244,18 @@ def run_decoding():
         task_aucs_srm, task_cms_srm = loso_cv(data_srm, labels, subjects)
         task_aucs_nosrm, task_cms_nosrm = loso_cv(data, labels, subjects)
 
-        aucs_srm.append(task_aucs_srm)
-        cms_srm.append(task_cms_srm)
-        aucs_nosrm.append(task_aucs_nosrm)
-        cms_nosrm.append(task_cms_nosrm)
+        results['aucs_srm'].append(task_aucs_srm)
+        results['cms_srm'].append(task_cms_srm)
+        results['aucs_nosrm'].append(task_aucs_nosrm)
+        results['cms_nosrm'].append(task_cms_nosrm)
 
         del data, data_srm, events, subjects, labels
+ 
+    with open('/scratch/users/csiyer/decoding_outputs/results.pkl', 'wb') as file:
+        pickle.dump(results, file)
+    file.close()
 
-    np.savez('/scratch/users/csiyer/decoding_outputs/classifier_results.npy', aucs_srm = aucs_srm, aucs_nosrm = aucs_nosrm, cms_srm = cms_srm, cms_nosrm = cms_nosrm)
-    plot_performance(tasks, aucs_srm, aucs_nosrm, save=True)
+    plot_performance(tasks, results, save=True)
 
 
 if __name__ == "__main__":
