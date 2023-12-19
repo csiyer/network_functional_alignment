@@ -219,7 +219,7 @@ def plot_performance(tasks, results, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig('/scratch/users/csiyer/decoding_outputs/performance_plot')
+        plt.savefig('/scratch/users/csiyer/decoding_outputs/second_correctonly/performance_plot')
 
 
 def run_decoding():
@@ -237,7 +237,7 @@ def run_decoding():
         print(f'loaded {len(data)} data files for {task}')
 
         # data, labels = average_trials(data, events)
-        data, labels = label_trs(data, events, task, correct_only=False) # CHANGE THIS TO FILTER ONLY CORRECT TRIALS
+        data, labels = label_trs(data, events, task, correct_only=True) # CHANGE THIS TO FILTER ONLY CORRECT TRIALS
         data_srm = srm_transform(data, subjects)
         print(f'labeled and srm\'d  {task}')
 
@@ -251,7 +251,7 @@ def run_decoding():
 
         del data, data_srm, events, subjects, labels
  
-    with open('/scratch/users/csiyer/decoding_outputs/results.pkl', 'wb') as file:
+    with open('/scratch/users/csiyer/decoding_outputs/second_correctonly/results.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
 
