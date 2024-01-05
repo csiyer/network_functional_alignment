@@ -18,7 +18,7 @@ Author: Chris Iyer
 Updated: 12/11/23
 """
 
-import glob, pickle
+import glob, pickle, argparse
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -192,7 +192,7 @@ def loso_cv(data, labels, subjects):
     return aucs, cms
 
 
-def plot_performance(tasks, results, save=False):
+def plot_performance(tasks, results, savelabel, save=False):
     acc_srm = results['aucs_srm']
     acc_nosrm = results['aucs_nosrm']
 
@@ -220,10 +220,10 @@ def plot_performance(tasks, results, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig('/scratch/users/csiyer/decoding_outputs/third_correctonly/performance_plot')
+        plt.savefig(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/performance_plot')
 
 
-def run_decoding():
+def run_decoding(correct_only):
     tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
     results = {
         'aucs_srm' : [],
@@ -238,7 +238,7 @@ def run_decoding():
         print(f'loaded {len(data)} data files for {task}')
 
         # data, labels = average_trials(data, events)
-        data, labels = label_trs(data, events, task, correct_only=True) # CHANGE THIS TO FILTER ONLY CORRECT TRIALS
+        data, labels = label_trs(data, events, task, correct_only=correct_only) 
         data_srm = srm_transform(data, subjects)
         print(f'labeled and srm\'d  {task}')
 
@@ -251,13 +251,20 @@ def run_decoding():
         results['cms_nosrm'].append(task_cms_nosrm)
 
         del data, data_srm, events, subjects, labels
- 
-    with open('/scratch/users/csiyer/decoding_outputs/third_correctonly/results.pkl', 'wb') as file:
+    
+    savelabel = 'correctonly' if correct_only else 'alltrials'
+
+    with open(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/results.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
-
-    plot_performance(tasks, results, save=True)
+    
+    plot_performance(tasks, results, savelabel, save=True)
 
 
 if __name__ == "__main__":
-    run_decoding()
+    parser = argparse.ArgumentParser(description='Task decoding script')
+    parser.add_argument('--correct_only', type=bool, default=False, help='Whether to exclude incorrect trials')
+    args = parser.parse_args()
+    print(args.correct_only)
+
+    run_decoding(correct_only = args.correct_only)
