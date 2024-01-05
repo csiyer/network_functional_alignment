@@ -173,7 +173,7 @@ def loso_cv(data, labels, subjects):
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
         # classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto').fit(train_data, train_labels) # this differs slightly from SVC(kernel = 'linear') but converges faster
-        classifier = LogisticRegression(penalty = 'l1', C = 1.0, dual = train_data.shape[0] < train_data.shape[1], solver='liblinear').fit(train_data, train_labels)
+        classifier = LogisticRegression(penalty = 'l1', C = 1.0, dual = False, solver='liblinear').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
         predicted_probs = classifier._predict_proba_lr(test_data)
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
