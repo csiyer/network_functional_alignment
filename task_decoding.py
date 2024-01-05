@@ -25,6 +25,7 @@ import nibabel as nib
 from nilearn.maskers import MultiNiftiMasker
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import LinearSVC
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score, confusion_matrix
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
@@ -171,8 +172,8 @@ def loso_cv(data, labels, subjects):
         train_data, train_labels = concatenate_data_labels(loso_indices)
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
-        classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto').fit(train_data, train_labels) # this differs slightly from SVC(kernel = 'linear') but converges faster
-        # CONSIDER: classifier = LogisticRegression(penalty = 'l2', C = 1.0, dual = True, solver='liblinear').fit(train_data, train_labels)
+        # classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto').fit(train_data, train_labels) # this differs slightly from SVC(kernel = 'linear') but converges faster
+        classifier = LogisticRegression(penalty = 'l1', C = 1.0, dual = train_data.shape[0] < train_data.shape[1], solver='liblinear').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
         predicted_probs = classifier._predict_proba_lr(test_data)
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
@@ -219,7 +220,7 @@ def plot_performance(tasks, results, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig('/scratch/users/csiyer/decoding_outputs/second_correctonly/performance_plot')
+        plt.savefig('/scratch/users/csiyer/decoding_outputs/third_correctonly/performance_plot')
 
 
 def run_decoding():
@@ -251,7 +252,7 @@ def run_decoding():
 
         del data, data_srm, events, subjects, labels
  
-    with open('/scratch/users/csiyer/decoding_outputs/second_correctonly/results.pkl', 'wb') as file:
+    with open('/scratch/users/csiyer/decoding_outputs/third_correctonly/results.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
 
