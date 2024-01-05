@@ -18,7 +18,7 @@ Author: Chris Iyer
 Updated: 12/11/23
 """
 
-import glob, pickle, argparse
+import os, glob, pickle, argparse
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -253,18 +253,19 @@ def run_decoding(correct_only):
         del data, data_srm, events, subjects, labels
     
     savelabel = 'correctonly' if correct_only else 'alltrials'
-
-    with open(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/results.pkl', 'wb') as file:
+    savepath = f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}'
+    if not os.path.exists(savepath):
+        os.makedirs(savepath)
+    with open(savepath + '/results.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
-    
-    plot_performance(tasks, results, savelabel, save=True)
+    plot_performance(tasks, results, savepath, save=True)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Task decoding script')
     parser.add_argument('--correct_only', type=bool, default=False, help='Whether to exclude incorrect trials')
     args = parser.parse_args()
-    print(args.correct_only)
+    print('correct_only: ', args.correct_only)
 
     run_decoding(correct_only = args.correct_only)
