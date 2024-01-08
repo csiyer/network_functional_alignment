@@ -263,8 +263,8 @@ def run_decoding(correct_only):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Task decoding script')
-    parser.add_argument('--correct_only', type=bool, default=False, help='Whether to exclude incorrect trials')
+    parser = argparse.ArgumentParser(description='Process --correct_only flag')
+    parser.add_argument('--correct_only', type=bool, default=False, help='Boolean flag')
     args = parser.parse_args()
     print('correct_only: ', args.correct_only)
 
