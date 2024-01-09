@@ -192,7 +192,7 @@ def loso_cv(data, labels, subjects):
     return aucs, cms
 
 
-def plot_performance(tasks, results, savelabel, save=False):
+def plot_performance(tasks, results, savepath, save=False):
     acc_srm = results['aucs_srm']
     acc_nosrm = results['aucs_nosrm']
 
@@ -220,7 +220,7 @@ def plot_performance(tasks, results, savelabel, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/plot')
+        plt.savefig(savepath+'/plot')
 
 
 def run_decoding(correct_only):
