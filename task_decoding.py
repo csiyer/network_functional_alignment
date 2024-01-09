@@ -220,7 +220,7 @@ def plot_performance(tasks, results, savelabel, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/performance_plot')
+        plt.savefig(f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}/plot')
 
 
 def run_decoding(correct_only):
