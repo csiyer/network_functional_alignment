@@ -223,7 +223,7 @@ def plot_performance(tasks, results, savepath, save=False):
 
 
 def run_decoding(correct_only):
-    tasks = ['directedForgetting','stopSignal','nBack','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
+    tasks = ['stopSignal','nBack','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
     results = {
         'aucs_srm' : [],
         'aucs_nosrm' : [],
