@@ -149,7 +149,7 @@ def srm_transform(data, subjects, zscore=True):
     return data_srm
 
 
-def loso_cv(data, labels, subjects, classifier_type='svc'):
+def loso_cv(data, labels, subjects):
 
     def concatenate_data_labels(idxs): # one giant matrix concatenating trials across subjects/sessions. this fxn is called in the one below.
         n_features = data[0].shape[1] # n_trials, n_voxels = data[0].shape 
@@ -172,10 +172,7 @@ def loso_cv(data, labels, subjects, classifier_type='svc'):
         train_data, train_labels = concatenate_data_labels(loso_indices)
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
-        if classifier_type == 'svc':
-            classifier = LinearSVC(C = 1.0, loss='hinge', dual = 'auto').fit(train_data, train_labels)
-        elif classifier_type == 'logistic':
-            classifier = LogisticRegression(penalty = 'l1', C = 1.0, dual = False, solver='liblinear').fit(train_data, train_labels)
+        classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
         predicted_probs = classifier._predict_proba_lr(test_data)
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
