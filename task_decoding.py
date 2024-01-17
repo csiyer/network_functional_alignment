@@ -191,7 +191,7 @@ def loso_cv(data, labels, subjects):
     return aucs, cms
 
 
-def plot_performance(tasks, results, savepath, save=False):
+def plot_performance(tasks, results, savename, save=False):
     acc_srm = results['aucs_srm']
     acc_nosrm = results['aucs_nosrm']
 
@@ -219,7 +219,7 @@ def plot_performance(tasks, results, savepath, save=False):
     ax.legend(custom_legend, ['SRM-transformed', 'MNI only', 'chance ~= 0.5'], loc='lower right')
     plt.show()
     if save:
-        plt.savefig(savepath+'/plot')
+        plt.savefig(savename+'_plot')
 
 
 def run_decoding(correct_only):
@@ -252,13 +252,14 @@ def run_decoding(correct_only):
         del data, data_srm, events, subjects, labels
     
     savelabel = 'correctonly' if correct_only else 'alltrials'
-    savepath = f'/scratch/users/csiyer/decoding_outputs/third_{savelabel}'
-    if not os.path.exists(savepath):
-        os.makedirs(savepath)
-    with open(savepath + '/results.pkl', 'wb') as file:
+    savedir = f'/scratch/users/csiyer/decoding_outputs/fourth_{savelabel}/'
+    if not os.path.exists(savedir):
+        os.makedirs(savedir)
+    savename = savedir + savelabel
+    with open(savename + '.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
-    plot_performance(tasks, results, savepath, save=True)
+    plot_performance(tasks, results, savename, save=True)
 
 
 if __name__ == "__main__":
