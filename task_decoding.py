@@ -9,10 +9,8 @@ on either SRM'd or raw data from all other subjects. Each TR is classified accor
 Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
 neural signatures of these cognitive control tasks are.
 
-NEXT STEPS:
-    - Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
+NEXT STEP: Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
         in order to decode trial-level beta maps instead of raw data?
-    - Differentiate trial types based on behavioral outcome (correct/incorrect response)
 
 Author: Chris Iyer
 Updated: 12/11/23
