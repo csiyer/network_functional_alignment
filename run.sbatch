@@ -15,23 +15,22 @@
 . ${HOME}/.bashrc  
 conda activate fa
 
-# python3 connectivity.py
-# python3 connectome_average.py # also handled by reliability.ipynb
+python3 connectivity.py
+python3 connectome_average.py # also handled by reliability.ipynb
 # python3 srm.py
 
-# silly stuff from ChatGPT to process an optional --correct_only flag
-while [[ $# -gt 0 ]]; do
-    key="$1"
-    case $key in
-        --correct_only)
-        CORRECT_ONLY=true
-        shift
-        ;;
-        *)
-        echo "Invalid flag: $1"
-        exit 1
-        ;;
-    esac
-done
-
-python3 task_decoding.py --correct_only=${CORRECT_ONLY}
+# # silly stuff from ChatGPT to process an optional --correct_only flag
+# while [[ $# -gt 0 ]]; do
+#     key="$1"
+#     case $key in
+#         --correct_only)
+#         CORRECT_ONLY=true
+#         shift
+#         ;;
+#         *)
+#         echo "Invalid flag: $1"
+#         exit 1
+#         ;;
+#     esac
+# done
+# python3 task_decoding.py --correct_only=${CORRECT_ONLY}
