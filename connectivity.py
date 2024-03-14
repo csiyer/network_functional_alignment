@@ -80,6 +80,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
         - voxel_data: voxel timeseries values, masked to all voxels within the gray matter mask + parcel map (so that we can track which parcel they're in later on)
 
     NOTE: our data has been formatted to the MNI152NLin2009cAsym_res-2 during fMRIPrep pre-processing
+    NOTE: not using confounds, because instead using Tedana ICA denoising - revisit this?
     """
     combined_mask = get_combined_mask() # mask where it's gray matter above 50% and the parcellation applies
 
@@ -92,7 +93,7 @@ def load_data_one_session(FILE_PATH, CONFOUNDS_FILE = '', parcel_labels = [], pa
         mask_img = combined_mask, 
         **masker_args
     )
-    voxel_data = voxel_masker.fit_transform(FILE_PATH) # , confounds = CONFOUNDS_FILE)
+    voxel_data = voxel_masker.fit_transform(FILE_PATH) # , confounds = CONFOUNDS_FILE) # see note above. using denoised files with no confounds
 
     parcel_masker = NiftiLabelsMasker(
         mask_img = combined_mask,

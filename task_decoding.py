@@ -13,7 +13,7 @@ NEXT STEP: Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_
         in order to decode trial-level beta maps instead of raw data?
 
 Author: Chris Iyer
-Updated: 12/11/23
+Updated: 3/14/24
 """
 
 import os, glob, pickle, argparse
@@ -43,61 +43,30 @@ def load_data(task):
     """
     bids_dir = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI'
 
-    data_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*optcomDenoised_bold.nii.gz', recursive=True) if 'ses-11' not in f and 'ses-12' not in f]
-    # confound_files = glob.glob(bids_dir + f'/**/*{task}*confounds*', recursive=True)
-    event_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*events*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] 
-    
+    data_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*optcom_bold.nii.gz', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] # previously optcomDenoised
+    confound_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*confounds*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f]
+
+    def process_confound_files(data_files, confound_files):
+        confound_dfs = []
+        for d in data_files: # need to index on the data because there are some wonky ones with a confound file but no data file
+            sub_ses = d[d.find('sub'):d.find('sub')+14]
+            c = [f for f in confound_files if sub_ses in f][0]
+            c = pd.read_csv(c, sep='\t')
+            c = c[[col for col in c.columns if 'cosine' in col or 'trans' in col or 'rot' in col]] # just get cosine and 24 motion regressors
+            confound_dfs.append(c)
+        return confound_dfs
+    confounds = process_confound_files(data_files, confound_files)
+
     data = MultiNiftiMasker(
         mask_img = get_combined_mask(), # mask where it's gray matter above 50% and the parcellation applies
         standardize = 'zscore_sample',
         n_jobs = 32
-    ).fit_transform(data_files) # , confounds = confound_files)
+    ).fit_transform(data_files, confounds = confounds)
 
-    events = [pd.read_csv(e, sep='\t') for e in event_files]
-    subjects = [e[e.find('sub') : e.find('sub')+7] for e in event_files]
+    events = [pd.read_csv(f, sep='\t') for f in glob.glob(bids_dir + f'/**/*{task}*events*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] 
+    subjects = [e[e.find('sub') : e.find('sub')+7] for e in data_files]
 
     return data, events, subjects
-
-
-def average_trials(data, events):
-    """
-        (1) Average the trials within each trial, accounting for a 4.5s HRF lag and a 1.49s TR.
-        (2) eliminate images/labels from 'NA" trials
-    """
-    if len(data) != len(events):
-        return "ERROR: number of sessions do not match"
-    
-    hrf_lag = 4.5
-    def time_to_tr(time): # for a given point in time, what TR contains activity relating to that time, accounting for HRF lag and 1.49s TR?
-        return (time+hrf_lag) / 1.49
-    
-    data_trialaveraged = []
-    labels = []
-    
-    for i_ses,(d,e) in enumerate(zip(data,events)): # for each subject/session
-
-        data_trialaveraged.append(np.zeros((len(e), d.shape[1]))) # new data matrix, n_trials x n_voxels
-        labels.append([]) 
-
-        for j_trial in range(len(e)): # for each trial
-            start_time = e.onset.iloc[j_trial]
-            if j_trial == len(e) - 1: 
-                stop_time = start_time + 6 # somewhat arbitrary stop for final trial
-            else:
-                stop_time = e.onset.iloc[j_trial+1]
-            
-            start_tr = int(np.floor(time_to_tr(start_time)))
-            stop_tr = int(np.floor(time_to_tr(stop_time)))
-
-            data_trialaveraged[i_ses][j_trial,] = np.mean(d[start_tr:stop_tr,], axis=0)
-            labels[i_ses].append(e.trial_type.iloc[j_trial])
-
-        # lastly, eliminate NA trials for this session
-        not_na = [i for i,l in enumerate(labels[i_ses]) if l != 'na']
-        data_trialaveraged[i_ses] = np.array(data_trialaveraged[i_ses])[not_na]
-        labels[i_ses] = np.array(labels[i_ses])[not_na]
-
-    return data_trialaveraged, labels
 
 
 def label_trs(data, events, task, correct_only=False):
@@ -234,7 +203,6 @@ def run_decoding(correct_only):
         data, events, subjects = load_data(task)
         print(f'loaded {len(data)} data files for {task}')
 
-        # data, labels = average_trials(data, events)
         data, labels = label_trs(data, events, task, correct_only=correct_only) 
         data_srm = srm_transform(data, subjects)
         print(f'labeled and srm\'d  {task}')
@@ -250,7 +218,7 @@ def run_decoding(correct_only):
         del data, data_srm, events, subjects, labels
     
     savelabel = 'correctonly' if correct_only else 'alltrials'
-    savedir = f'/scratch/users/csiyer/decoding_outputs/fourth_{savelabel}/'
+    savedir = f'/scratch/users/csiyer/decoding_outputs/fifth_confounds_{savelabel}/'
     if not os.path.exists(savedir):
         os.makedirs(savedir)
     savename = savedir + savelabel
