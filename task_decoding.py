@@ -10,7 +10,8 @@ Assessing the performance benefit of SRM transformation tests how functionally s
 neural signatures of these cognitive control tasks are.
 
 NEXT STEP: Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
-        in order to decode trial-level beta maps instead of raw data?
+    and this guide: https://nilearn.github.io/dev/auto_examples/07_advanced/plot_beta_series.html
+    decode trial-level beta maps instead of raw data?
 
 Author: Chris Iyer
 Updated: 3/14/24
