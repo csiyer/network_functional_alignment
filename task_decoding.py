@@ -220,7 +220,7 @@ def run_decoding(correct_only):
         del data, data_srm, events, subjects, labels
     
     savelabel = 'correctonly' if correct_only else 'alltrials'
-    savedir = f'/scratch/users/csiyer/decoding_outputs/fifth_confounds_{savelabel}/'
+    savedir = f'/scratch/users/csiyer/decoding_outputs/current_{savelabel}/'
     if not os.path.exists(savedir):
         os.makedirs(savedir)
     savename = savedir + savelabel
