@@ -1,20 +1,5 @@
 """
-Here, we use transformation matrices from srm.py to transform task data into the shared space.
-
-Then, we decode trial conditions (e.g., congruent vs. incongruent; see full condition list below) 
-between subjects using leave-one-subject-out cross-validation, with and without the SRM transformation. 
-In each fold, all of one subject's sessions are excluded from the training set and tested on, using classifiers trained
-on either SRM'd or raw data from all other subjects. Each TR is classified according to its trial condition.
-
-Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
-neural signatures of these cognitive control tasks are.
-
-NEXT STEP: Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
-    and this guide: https://nilearn.github.io/dev/auto_examples/07_advanced/plot_beta_series.html
-    decode trial-level beta maps instead of raw data?
-
-Author: Chris Iyer
-Updated: 3/14/24
+Alternate version to run RBF kernel while other code runs
 """
 
 import os, glob, pickle, argparse
@@ -140,8 +125,8 @@ def loso_cv(data, labels, subjects):
         train_data, train_labels = concatenate_data_labels(loso_indices)
         test_data, test_labels = concatenate_data_labels(sub_indices)
 
-        classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
-        # classifier = SVC(C = 1.0, kernel = 'rbf', class_weight = 'balanced').fit(train_data, train_labels)
+        # classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
+        classifier = SVC(C = 1.0, kernel = 'rbf', class_weight = 'balanced').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
         predicted_probs = classifier._predict_proba_lr(test_data)
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
@@ -219,7 +204,7 @@ def run_decoding(correct_only):
 
         del data, data_srm, events, subjects, labels
     
-    savelabel = 'correctonly' if correct_only else 'alltrials'
+    savelabel = 'rbf_correctonly' if correct_only else 'rbf_alltrials'
     savedir = f'/scratch/users/csiyer/decoding_outputs/fifth_confounds_{savelabel}/'
     if not os.path.exists(savedir):
         os.makedirs(savedir)
