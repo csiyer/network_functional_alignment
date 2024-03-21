@@ -147,7 +147,7 @@ def loso_cv(data, labels, subjects):
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
             predicted_probs = np.max(predicted_probs, axis=1)
 
-        auc = roc_auc_score(y_true = test_labels, y_score = predicted_probs, multi_class='ovr', average='micro')
+        auc = roc_auc_score(y_true = test_labels, y_score = predicted_probs, multi_class='ovr', average='macro')
         cm = confusion_matrix(test_labels, predicted_labels)
         return auc, cm
 
