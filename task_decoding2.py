@@ -128,7 +128,7 @@ def loso_cv(data, labels, subjects):
         # classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
         classifier = SVC(C = 1.0, kernel = 'rbf', class_weight = 'balanced').fit(train_data, train_labels)
         predicted_labels = classifier.predict(test_data)
-        predicted_probs = classifier._predict_proba_lr(test_data)
+        predicted_probs = classifier.predict_proba(test_data)
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
             predicted_probs = np.max(predicted_probs, axis=1)
 
