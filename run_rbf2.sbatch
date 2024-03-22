@@ -1,13 +1,13 @@
 #!/bin/bash
-#SBATCH -J network_connectivity_csi-2
+#SBATCH -J network_connectivity_csi4
 #SBATCH --time=23:00:00
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem-per-cpu=8G
 #SBATCH -p bigmem
 # Outputs ---------------------------------
-#SBATCH -o  log2.out
-#SBATCH -e log2.err
+#SBATCH -o  log4.out
+#SBATCH -e log4.err
 #SBATCH --mail-user=csiyer@stanford.edu
 #SBATCH --mail-type=END
 # ------------------------------------------
@@ -33,4 +33,4 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
-python3 task_decoding2.py --correct_only=${CORRECT_ONLY}
+python3 task_decoding_rbf.py --correct_only=${CORRECT_ONLY}
