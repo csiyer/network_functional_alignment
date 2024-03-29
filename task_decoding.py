@@ -86,7 +86,7 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
             sub_labels.append(trial.split('__')[0]) # original trial_type
 
         beta_maps.append(concat_imgs(sub_beta_maps))
-        labels.append(concat_imgs(sub_labels))
+        labels.append(sub_labels)
 
     return beta_maps, labels
 
@@ -125,7 +125,7 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
             sub_labels.append(trial_condition.split('__')[0]) # recover original trial name
 
         beta_maps.append(concat_imgs(sub_beta_maps))
-        labels.append(concat_imgs(sub_labels))
+        labels.append(sub_labels)
 
     return beta_maps, labels
 
