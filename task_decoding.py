@@ -1,4 +1,6 @@
 """
+****NEW**** this data first extracts trial-wise beta series maps using first-level GLM!
+
 Here, we use transformation matrices from srm.py to transform task data into the shared space.
 
 Then, we decode trial conditions (e.g., congruent vs. incongruent; see full condition list below) 
@@ -9,22 +11,18 @@ on either SRM'd or raw data from all other subjects. Each TR is classified accor
 Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
 neural signatures of these cognitive control tasks are.
 
-NEXT STEP: Follow this tutorial: https://nilearn.github.io/dev/auto_examples/02_decoding/plot_haxby_glm_decoding.html#sphx-glr-auto-examples-02-decoding-plot-haxby-glm-decoding-py
-    and this guide: https://nilearn.github.io/dev/auto_examples/07_advanced/plot_beta_series.html
-    decode trial-level beta maps instead of raw data?
-
 Author: Chris Iyer
-Updated: 3/14/24
+Updated: 3/27/24
 """
 
 import os, glob, pickle, argparse
 import numpy as np
 import pandas as pd
-import nibabel as nib
 from nilearn.maskers import MultiNiftiMasker
+from nilearn.glm.first_level import FirstLevelModel
+from nilearn.image import concat_imgs
 from sklearn.preprocessing import StandardScaler
-from sklearn.svm import LinearSVC, SVC
-from sklearn.linear_model import LogisticRegression
+from sklearn.svm import LinearSVC
 from sklearn.metrics import roc_auc_score, confusion_matrix
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
@@ -34,74 +32,135 @@ from joblib import Parallel, delayed
 from connectivity import get_combined_mask
 # /oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI
 
-def load_data(task):
+def load_files(task):
     """
-    Loads all data for a single task (5 subjects x 5 sessions each = 25 files).
-    Returns: 
-        - list of data from MultiNiftiMasker
-        - list of event files in the same order
-        - subject list matching the two above^
+    Retrieves data filenames, event files, and trimmed confounds dataframes given a task
     """
     bids_dir = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI'
-
     data_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*optcom_bold.nii.gz', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] # previously optcomDenoised
     confound_files = [f for f in glob.glob(bids_dir + f'/**/*{task}*confounds*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f]
 
-    def process_confound_files(data_files, confound_files):
+    def process_confound_files(data_files, confound_files): # make sure they correspond to data files, extract to pd df
         confound_dfs = []
         for d in data_files: # need to index on the data because there are some wonky ones with a confound file but no data file
             sub_ses = d[d.find('sub'):d.find('sub')+14]
-            c = [f for f in confound_files if sub_ses in f][0]
-            c = pd.read_csv(c, sep='\t')
-            c = c[[col for col in c.columns if 'cosine' in col or 'trans' in col or 'rot' in col]] # just get cosine and 24 motion regressors
-            confound_dfs.append(c)
+            c_df = pd.read_csv([f for f in confound_files if sub_ses in f][0], sep='\t')
+            c_df = c_df[[col for col in c_df.columns if 'cosine' in col or 'trans' in col or 'rot' in col]] # just get cosine and 24 motion regressors
+            confound_dfs.append(c_df)
         return confound_dfs
     confounds = process_confound_files(data_files, confound_files)
-
-    data = MultiNiftiMasker(
-        mask_img = get_combined_mask(), # mask where it's gray matter above 50% and the parcellation applies
-        standardize = 'zscore_sample',
-        n_jobs = 32
-    ).fit_transform(data_files, confounds = confounds)
 
     events = [pd.read_csv(f, sep='\t') for f in glob.glob(bids_dir + f'/**/*{task}*events*', recursive=True) if 'ses-11' not in f and 'ses-12' not in f] 
     subjects = [e[e.find('sub') : e.find('sub')+7] for e in data_files]
 
-    return data, events, subjects
+    return data_files, events, confounds, subjects
+
+def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=False):
+    """Trial-wise GLM modeling, using the Least Squares - All approach"""
+    beta_maps = []
+    labels = []
+
+    for i_sub,sub in enumerate(subjects): # for each session (subjects are repeated)
+        sub_beta_maps = []
+        sub_labels = []
+        glm_params['subject_label'] = sub
+
+        # construct new events df with trial-specific labels
+        lsa_events_df = events[i_sub].copy()
+        conditions = lsa_events_df['trial_type'].unique()
+        condition_counter = {c: 0 for c in conditions}
+
+        for i_trial, trial in lsa_events_df.iterrows():
+            trial_condition = trial['trial_type']
+            condition_counter[trial_condition] += 1
+            lsa_events_df.loc[i_trial, 'trial_type'] = f"{trial_condition}__{condition_counter[trial_condition]:03d}" # new trial-specific label '__'
+
+        # fit glm with new events df
+        lsa_glm = FirstLevelModel(**glm_params)
+        lsa_glm.fit(data_files[i_sub], events=lsa_events_df, confounds=confounds)
+
+        # extract beta series maps
+        for trial in lsa_events_df['trial_type'].unique():
+            beta_map = lsa_glm.compute_contrast(trial, output_type='effect_size') 
+            sub_beta_maps.append(beta_map)
+            sub_labels.append(trial.split('__')[0]) # original trial_type
+
+        beta_maps.append(concat_imgs(sub_beta_maps))
+        labels.append(concat_imgs(sub_labels))
+
+    return beta_maps, labels
 
 
-def label_trs(data, events, task, correct_only=False):
+def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=False):
+    """Trial-wise GLM modeling, using the Least Squares - Separate approach"""
+    beta_maps = []
+    labels = []
+
+    def label_one_row(df, row_number):
+        """Label one trial for one LSS model. Takes events file and row number of trial to model."""
+        df = df.copy()
+
+        # Determine which number trial it is *within its condition*
+        trials_of_this_type = df["trial_type"] == df.loc[row_number, "trial_type"]
+        trial_type_index_list = df["trial_type"].loc[trials_of_this_type].index.tolist()
+        trial_number = trial_type_index_list.index(row_number)
+
+        trial_name = f"{trial_condition}__{trial_number:03d}" # new trial-specific label
+        df.loc[row_number, "trial_type"] = trial_name
+        return df, trial_name
+
+    for i_sub,sub in enumerate(subjects): # for each session (subjects are repeated)
+        sub_beta_maps = []
+        sub_labels = []
+        glm_params['subject_label'] = sub
+
+        for i_trial,trial in events[i_sub].iterrows():
+            lss_events, trial_condition = label_one_row(events[i_sub], i_trial)
+
+            lss_glm = FirstLevelModel(**glm_params)
+            lss_glm.fit(data_files[i_sub], lss_events)
+            beta_map = lss_glm.compute_contrast(trial_condition, output_type="effect_size")
+
+            sub_beta_maps.append(beta_map)
+            sub_labels.append(trial_condition.split('__')[0]) # recover original trial name
+
+        beta_maps.append(concat_imgs(sub_beta_maps))
+        labels.append(concat_imgs(sub_labels))
+
+    return beta_maps, labels
+
+
+def extract_beta_series(data_files, events, confounds, subjects, correct_only=False, method='LSA'):
     """
-    Instead of averaging TRs within each trial, this assigns each TR a trial label.
-    Uses task_decoding_condition.json to define the trials that we keep / label. (eliminates NAs and irrelevant trials)
-    correct_only filters for only trials with correct responses.
+    For a given task, this function will run first level GLM to extract trial-wise beta timeseries (LSS or LSA)
+        for each subject/session. It will then vectorize the beta maps with nilearn maskers.
+    Returns:
+        data: a list (of length n_sessions) of beta series data from each trial
+        labels: a list (of length n_sessions) of lists of trial_type labels corresponding to data
     """
-    with open('utils/task_decoding_conditions.json', 'r') as file:
-        task_conditions = eval(file.read())
+    glm_params = { # SHOULD PULL THESE SPECIFICALLY FROM SOMEWHERE?
+        't_r': 1.49,
+        'mask_img': get_combined_mask(),
+        'noise_model': 'ar1', #???
+        'standardize': False,
+        'drift_model': None,
+        'smoothing_fwhm': 5, #????
+        'minimize_memory': False,
+        'n_jobs': 32
+    }
 
-    hrf_lag = 4.5
-    def tr_to_time(tr): # for the Nth tr, from which timepoint does this TR contain brain information?
-        return tr*1.49 - hrf_lag
-    
-    def find_active_trial(tr,e): # for a given time, what was the active trial?
-        time = tr_to_time(tr)
-        if time < e.onset.iloc[0] or time > e.onset.iloc[-1] + 6:
-            return None
-        else:
-            trial_num = e.onset[e.onset <= time].idxmax()
-            trial_type = e[task_conditions[task]['colname']].iloc[trial_num]
-            correct = e.correct_response.iloc[trial_num] == e.key_press.iloc[trial_num]
-            if (correct_only and not correct) or (trial_type not in task_conditions[task]['values']): # either incorrect trial or excluded trial type
-                return None
-            return task_conditions[task]['values'][trial_type]
-        
-    labels = [np.array([find_active_trial(i,e) for i in range(d.shape[0])]) for d, e in zip(data, events)]
-    
-    # remove NA/excluded trials
-    data_trimmed = [d[np.where(l != None)] for d,l in zip(data, labels)] 
-    labels = [l[np.where(l != None)] for l in labels]
+    if method=='LSA':
+        beta_maps, labels = glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=correct_only)
+    elif method=='LSS':
+        beta_maps, labels = glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=correct_only)
 
-    return data_trimmed, labels
+    data = MultiNiftiMasker(
+        mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
+        standardize = 'zscore_sample',
+        n_jobs = 32
+    ).fit_transform(beta_maps)
+
+    return data, labels
 
 
 def srm_transform(data, subjects, zscore=True):
@@ -199,15 +258,14 @@ def run_decoding(correct_only):
         'cms_srm' : [],
         'cms_nosrm' : []
     }
-
     for task in tasks:
         print(f'starting {task}')
-        data, events, subjects = load_data(task)
-        print(f'loaded {len(data)} data files for {task}')
+        data_files, events, confounds, subjects = load_files(task)
+        print(f'loaded {len(data_files)} data files for {task}')
 
-        data, labels = label_trs(data, events, task, correct_only=correct_only) 
+        data, labels = extract_beta_series(data_files, events, confounds, subjects, correct_only=correct_only, method='LSA')
         data_srm = srm_transform(data, subjects)
-        print(f'labeled and srm\'d  {task}')
+        print(f'extracted and srm\'d  {task}')
 
         task_aucs_srm, task_cms_srm = loso_cv(data_srm, labels, subjects)
         task_aucs_nosrm, task_cms_nosrm = loso_cv(data, labels, subjects)
@@ -217,7 +275,7 @@ def run_decoding(correct_only):
         results['aucs_nosrm'].append(task_aucs_nosrm)
         results['cms_nosrm'].append(task_cms_nosrm)
 
-        del data, data_srm, events, subjects, labels
+        del data, data_srm, events, confounds, subjects, labels
     
     savelabel = 'correctonly' if correct_only else 'alltrials'
     savedir = f'/scratch/users/csiyer/decoding_outputs/current_{savelabel}/'
@@ -227,6 +285,7 @@ def run_decoding(correct_only):
     with open(savename + '.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
+
     plot_performance(tasks, results, savename, save=True)
 
 
