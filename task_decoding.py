@@ -12,7 +12,7 @@ Assessing the performance benefit of SRM transformation tests how functionally s
 neural signatures of these cognitive control tasks are.
 
 Author: Chris Iyer
-Updated: 3/27/24
+Updated: 3/29/24
 """
 
 import os, glob, pickle, argparse
@@ -77,7 +77,7 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
 
         # fit glm with new events df
         lsa_glm = FirstLevelModel(**glm_params)
-        lsa_glm.fit(data_files[i_sub], events=lsa_events_df, confounds=confounds)
+        lsa_glm.fit(data_files[i_sub], events=lsa_events_df, confounds=confounds[i_sub])
 
         # extract beta series maps
         for trial in lsa_events_df['trial_type'].unique():
