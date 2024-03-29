@@ -114,11 +114,11 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
         sub_labels = []
         glm_params['subject_label'] = sub
 
-        for i_trial,trial in events[i_sub].iterrows():
+        for i_trial in range(len(events[i_sub])):
             lss_events, trial_condition = label_one_row(events[i_sub], i_trial)
 
             lss_glm = FirstLevelModel(**glm_params)
-            lss_glm.fit(data_files[i_sub], lss_events)
+            lss_glm.fit(data_files[i_sub], events=lss_events, confounds=confounds[i_sub])
             beta_map = lss_glm.compute_contrast(trial_condition, output_type="effect_size")
 
             sub_beta_maps.append(beta_map)
