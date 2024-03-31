@@ -154,6 +154,7 @@ def extract_beta_series(data_files, events, confounds, subjects, correct_only=Fa
     elif method=='LSS':
         beta_maps, labels = glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=correct_only)
 
+    print('finished GLM, masking data')
     data = MultiNiftiMasker(
         mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
         standardize = 'zscore_sample',
