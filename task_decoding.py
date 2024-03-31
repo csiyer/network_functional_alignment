@@ -77,7 +77,7 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
 
         # fit glm with new events df
         lsa_glm = FirstLevelModel(**glm_params)
-        lsa_glm.fit(data_files[i_sub], events=lsa_events_df['onset','duration','trial_type'], confounds=confounds[i_sub])
+        lsa_glm.fit(data_files[i_sub], events=lsa_events_df[['onset','duration','trial_type']], confounds=confounds[i_sub])
 
         # extract beta series maps
         for trial in lsa_events_df['trial_type'].unique():
@@ -118,7 +118,7 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
             lss_events_df, trial_condition = label_one_row(events[i_sub], i_trial)
 
             lss_glm = FirstLevelModel(**glm_params)
-            lss_glm.fit(data_files[i_sub], events=lss_events_df['onset','duration','trial_type'], confounds=confounds[i_sub])
+            lss_glm.fit(data_files[i_sub], events=lss_events_df[['onset','duration','trial_type']], confounds=confounds[i_sub])
             beta_map = lss_glm.compute_contrast(trial_condition, output_type="effect_size")
 
             sub_beta_maps.append(beta_map)
