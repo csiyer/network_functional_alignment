@@ -77,7 +77,7 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
 
         # fit glm with new events df
         lsa_glm = FirstLevelModel(**glm_params)
-        lsa_glm.fit(data_files[i_sub], events=lsa_events_df, confounds=confounds[i_sub])
+        lsa_glm.fit(data_files[i_sub], events=lsa_events_df['onset','duration','trial_type'], confounds=confounds[i_sub])
 
         # extract beta series maps
         for trial in lsa_events_df['trial_type'].unique():
@@ -101,9 +101,9 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
         df = df.copy()
 
         # Determine which number trial it is *within its condition*
-        trials_of_this_type = df["trial_type"] == df.loc[row_number, "trial_type"]
-        trial_type_index_list = df["trial_type"].loc[trials_of_this_type].index.tolist()
-        trial_number = trial_type_index_list.index(row_number)
+        trial_condition = df.loc[row_number, "trial_type"]
+        trials_of_this_type_indices = df["trial_type"].loc[df["trial_type"] == trial_condition].index.tolist()
+        trial_number = trials_of_this_type_indices.index(row_number)
 
         trial_name = f"{trial_condition}__{trial_number:03d}" # new trial-specific label
         df.loc[row_number, "trial_type"] = trial_name
@@ -115,10 +115,10 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
         glm_params['subject_label'] = sub
 
         for i_trial in range(len(events[i_sub])):
-            lss_events, trial_condition = label_one_row(events[i_sub], i_trial)
+            lss_events_df, trial_condition = label_one_row(events[i_sub], i_trial)
 
             lss_glm = FirstLevelModel(**glm_params)
-            lss_glm.fit(data_files[i_sub], events=lss_events, confounds=confounds[i_sub])
+            lss_glm.fit(data_files[i_sub], events=lss_events_df['onset','duration','trial_type'], confounds=confounds[i_sub])
             beta_map = lss_glm.compute_contrast(trial_condition, output_type="effect_size")
 
             sub_beta_maps.append(beta_map)
