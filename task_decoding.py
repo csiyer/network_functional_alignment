@@ -55,12 +55,14 @@ def load_files(task):
 
     return data_files, events, confounds, subjects
 
+
 def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=False):
     """Trial-wise GLM modeling, using the Least Squares - All approach"""
     beta_maps = []
     labels = []
 
-    for i_sub,sub in enumerate(subjects): # for each session (subjects are repeated)
+    def one_sub(i_sub):
+        sub = subjects[i_sub]
         sub_beta_maps = []
         sub_labels = []
         glm_params['subject_label'] = sub
@@ -69,30 +71,41 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
         lsa_events_df = events[i_sub].copy()
         conditions = lsa_events_df['trial_type'].unique()
         condition_counter = {c: 0 for c in conditions}
-
         for i_trial, trial in lsa_events_df.iterrows():
             trial_condition = trial['trial_type']
             condition_counter[trial_condition] += 1
             lsa_events_df.loc[i_trial, 'trial_type'] = f"{trial_condition}__{condition_counter[trial_condition]:03d}" # new trial-specific label '__'
-
+        
         # fit glm with new events df
         lsa_glm = FirstLevelModel(**glm_params)
         lsa_glm.fit(data_files[i_sub], events=lsa_events_df[['onset','duration','trial_type']], confounds=confounds[i_sub])
-
-        # extract beta series maps
+        
+        # extract beta maps
         for trial in lsa_events_df['trial_type'].unique():
             beta_map = lsa_glm.compute_contrast(trial, output_type='effect_size') 
             sub_beta_maps.append(beta_map)
             sub_labels.append(trial.split('__')[0]) # original trial_type
+        
+        if correct_only:
+            correct_idxs =  events[i_sub][ events[i_sub].correct_response == events[i_sub].key_press ].index
+            sub_beta_maps = [sub_beta_maps[idx] for idx in correct_idxs]
+            sub_labels = [sub_labels[idx] for idx in correct_idxs]
 
-        beta_maps.append(concat_imgs(sub_beta_maps))
-        labels.append(sub_labels)
+        return concat_imgs(sub_beta_maps), sub_labels
+    
+    out = Parallel(n_jobs = min(len(np.unique(subjects)), 32) ) (
+        delayed(one_sub)(i_sub) for i_sub in range(len(subjects))
+    )
 
+    beta_maps = [s[0] for s in out]
+    labels = [s[1] for s in out]
     return beta_maps, labels
 
 
 def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=False):
-    """Trial-wise GLM modeling, using the Least Squares - Separate approach"""
+    """Trial-wise GLM modeling, using the Least Squares - Separate approach
+        NOTE: not efficient enough to run yet? idk
+    """
     beta_maps = []
     labels = []
 
@@ -108,8 +121,9 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
         trial_name = f"{trial_condition}__{trial_number:03d}" # new trial-specific label
         df.loc[row_number, "trial_type"] = trial_name
         return df, trial_name
-
-    for i_sub,sub in enumerate(subjects): # for each session (subjects are repeated)
+    
+    def one_sub(i_sub):
+        sub = subjects[i_sub]
         sub_beta_maps = []
         sub_labels = []
         glm_params['subject_label'] = sub
@@ -124,9 +138,19 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
             sub_beta_maps.append(beta_map)
             sub_labels.append(trial_condition.split('__')[0]) # recover original trial name
 
-        beta_maps.append(concat_imgs(sub_beta_maps))
-        labels.append(sub_labels)
+        if correct_only:
+            correct_idxs =  events[i_sub][ events[i_sub].correct_response == events[i_sub].key_press ].index
+            sub_beta_maps = [sub_beta_maps[idx] for idx in correct_idxs]
+            sub_labels = [sub_labels[idx] for idx in correct_idxs]
 
+        return concat_imgs(sub_beta_maps), sub_labels
+
+    out = Parallel(n_jobs = min(len(np.unique(subjects)), 32) ) (
+        delayed(one_sub)(i_sub) for i_sub in range(len(subjects))
+    )
+
+    beta_maps = [s[0] for s in out]
+    labels = [s[1] for s in out]
     return beta_maps, labels
 
 
