@@ -169,8 +169,7 @@ def extract_beta_series(data_files, events, confounds, subjects, correct_only=Fa
         'standardize': False,
         'drift_model': None,
         'smoothing_fwhm': 5, #????
-        'minimize_memory': False,
-        'n_jobs': 32
+        'n_jobs': 1
     }
 
     if method=='LSA':
