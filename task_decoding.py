@@ -93,7 +93,7 @@ def glm_lsa(data_files, events, confounds, subjects, glm_params, correct_only=Fa
 
         return concat_imgs(sub_beta_maps), sub_labels
     
-    out = Parallel(n_jobs = min(len(np.unique(subjects)), 32) ) (
+    out = Parallel(n_jobs = min(len(subjects), 32) ) (
         delayed(one_sub)(i_sub) for i_sub in range(len(subjects))
     )
 
@@ -145,7 +145,7 @@ def glm_lss(data_files, events, confounds, subjects, glm_params, correct_only=Fa
 
         return concat_imgs(sub_beta_maps), sub_labels
 
-    out = Parallel(n_jobs = min(len(np.unique(subjects)), 32) ) (
+    out = Parallel(n_jobs = min(len(subjects), 32) ) (
         delayed(one_sub)(i_sub) for i_sub in range(len(subjects))
     )
 
