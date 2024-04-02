@@ -301,15 +301,14 @@ def run_decoding(correct_only):
 
         del data, data_srm, events, confounds, subjects, labels
     
+    
+    savedir = f'/scratch/users/csiyer/decoding_outputs/current/'
     savelabel = 'correctonly' if correct_only else 'alltrials'
-    savedir = f'/scratch/users/csiyer/decoding_outputs/current_{savelabel}/'
-    if not os.path.exists(savedir):
-        os.makedirs(savedir)
     savename = savedir + savelabel
     with open(savename + '.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
-
+    
     plot_performance(tasks, results, savename, save=True)
 
 
