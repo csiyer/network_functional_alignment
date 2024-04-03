@@ -7,7 +7,7 @@ Author: Chris Iyer
 Updated: 4/2/24
 """
 
-import os, glob
+import os, glob, pickle
 import numpy as np
 import pandas as pd
 from nilearn.maskers import MultiNiftiMasker
@@ -161,12 +161,16 @@ def aggregate_saved_maps(task):
     GLM_PATH = f'/scratch/users/csiyer/glm_outputs/{task}'
     task_beta_files = glob.glob(GLM_PATH + '*beta*')
     task_beta_maps = [np.load(f) for f in task_beta_files]
-    np.save(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.npy', task_beta_maps)
+    with open(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.pkl', 'wb') as f:
+            pickle.dump(task_beta_maps, f)
+    f.close()
 
     task_labels_files = glob.glob(GLM_PATH + '*labels*')
     task_labels = [np.load(f) for f in task_labels_files]
-    np.save(f'/scratch/users/csiyer/glm_outputs/{task}_labels.npy', task_labels)
-    
+    with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'wb') as f:
+            pickle.dump(task_labels, f)
+    f.close()
+
     for b,l in zip(task_beta_files, task_labels_files): # now delete old files
         os.remove(b)
         os.remove(l)

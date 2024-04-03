@@ -33,8 +33,12 @@ def load_files(task, correct_only = False):
 
     GLM_PATH = '/scratch/users/csiyer/glm_outputs/'
     subjects = np.load(GLM_PATH + task + '_subjects.npy')
-    data = np.load(GLM_PATH + task + '_beta_maps.npy')
-    labels_all = np.load(GLM_PATH + task + '_beta_maps.npy')
+    with open(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.pkl', 'rb') as f:
+            data = pickle.load(f)
+    f.close()
+    with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'rb') as f:
+            labels_all = pickle.load(f)
+    f.close()
 
     if correct_only:
         labels = [ [trial_type for trial_type, correct in session_labels if correct == 'True'] for session_labels in labels_all ]
