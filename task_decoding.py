@@ -39,10 +39,10 @@ def load_files(task, correct_only = False):
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'rb') as f:
             labels_all = pickle.load(f)
     f.close()
-
+    
     if correct_only:
         labels = [ [trial_type for trial_type, correct in session_labels if correct == 'True'] for session_labels in labels_all ]
-        data = [ [beta_map for beta_map, (trial_type, correct) in zip(session_data, session_labels) if correct == "True"] for session_data, session_labels in zip(data, labels_all)]
+        data = [ np.array([beta_map for beta_map, (_, correct) in zip(session_data, session_labels) if correct == "True"]) for session_data, session_labels in zip(data, labels_all)]
     else:
         labels = [ [trial_type for trial_type, _ in session_labels] for session_labels in labels_all ]
 
