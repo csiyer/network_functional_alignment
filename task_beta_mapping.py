@@ -133,8 +133,7 @@ def extract_save_beta_maps(task, method='LSA'):
     }
 
     for sub, d_file, e_file, c_file in zip(subjects, data_files, event_files, confounds_files):
-        
-        subject_session = d_file[d_file.find('sub'):d_file.find('sub')+7] + '_' + d_file[d_file.find('ses'):d_file.find('ses')+7] 
+        subject_session = d_file[d_file.find('sub'):d_file.find('sub')+7] + '_' + d_file[d_file.find('ses'):d_file.find('ses')+6] 
         events = pd.read_csv(e_file, sep='\t')
         confounds = pd.read_csv(c_file, sep='\t')
         confounds = confounds[[col for col in confounds.columns if 'cosine' in col or 'trans' in col or 'rot' in col]] # just get cosine and 24 motion regressors
