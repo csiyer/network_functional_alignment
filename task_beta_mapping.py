@@ -158,7 +158,7 @@ def extract_save_beta_maps(task, method='LSA'):
 def aggregate_saved_maps(task):
     """Searches through saved beta maps + labels files and combines within each task."""
     
-    GLM_PATH = f'/scratch/users/csiyer/glm_outputs/task'
+    GLM_PATH = f'/scratch/users/csiyer/glm_outputs/{task}'
     task_beta_files = glob.glob(GLM_PATH + '*beta*')
     task_beta_maps = [np.load(f) for f in task_beta_files]
     np.save(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.npy', task_beta_maps)
