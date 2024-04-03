@@ -1,3 +1,5 @@
+"""Mostly for testing purposes. Just to run code on SRM'd data easily."""
+
 import numpy as np
 from task_decoding import load_data, na_check, label_trs, srm_transform
 
