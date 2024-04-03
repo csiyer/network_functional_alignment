@@ -159,13 +159,13 @@ def aggregate_saved_maps(task):
     """Searches through saved beta maps + labels files and combines within each task."""
     
     GLM_PATH = f'/scratch/users/csiyer/glm_outputs/{task}'
-    task_beta_files = glob.glob(GLM_PATH + '*beta*')
+    task_beta_files = glob.glob(GLM_PATH + '*sub*beta*')
     task_beta_maps = [np.load(f) for f in task_beta_files]
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.pkl', 'wb') as f:
             pickle.dump(task_beta_maps, f)
     f.close()
 
-    task_labels_files = glob.glob(GLM_PATH + '*labels*')
+    task_labels_files = glob.glob(GLM_PATH + '*sub*labels*')
     task_labels = [np.load(f) for f in task_labels_files]
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'wb') as f:
             pickle.dump(task_labels, f)
