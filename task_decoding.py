@@ -39,7 +39,7 @@ def load_files(task, correct_only = False):
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'rb') as f:
             labels_all = pickle.load(f)
     f.close()
-    
+
     if correct_only:
         labels = [ [trial_type for trial_type, correct in session_labels if correct == 'True'] for session_labels in labels_all ]
         data = [ np.array([beta_map for beta_map, (_, correct) in zip(session_data, session_labels) if correct == "True"]) for session_data, session_labels in zip(data, labels_all)]
@@ -96,7 +96,7 @@ def loso_cv(data, labels, subjects):
         cm = confusion_matrix(test_labels, predicted_labels)
         return auc, cm
 
-    auc_cm = Parallel(n_jobs = min(len(np.unique(subjects)), 32) )( 
+    auc_cm = Parallel(n_jobs = 32)( 
         delayed(predict_left_out_subject)(sub) for sub in np.unique(subjects)
     )
 
@@ -148,6 +148,8 @@ def run_decoding(correct_only):
         print(f'starting {task}')
         subjects, data, labels = load_files(task, correct_only=correct_only)
         data_srm = srm_transform(data, subjects)
+        print(f'loaded data for {task}')
+
         task_aucs_srm, task_cms_srm = loso_cv(data_srm, labels, subjects)
         task_aucs_nosrm, task_cms_nosrm = loso_cv(data, labels, subjects)
         

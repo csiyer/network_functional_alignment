@@ -159,21 +159,26 @@ def aggregate_saved_maps(task):
     """Searches through saved beta maps + labels files and combines within each task."""
     
     GLM_PATH = f'/scratch/users/csiyer/glm_outputs/{task}'
-    task_beta_files = glob.glob(GLM_PATH + '*sub*beta*')
+    task_beta_files = sorted(glob.glob(GLM_PATH + '*sub*beta*'))
     task_beta_maps = [np.load(f) for f in task_beta_files]
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.pkl', 'wb') as f:
             pickle.dump(task_beta_maps, f)
     f.close()
 
-    task_labels_files = glob.glob(GLM_PATH + '*sub*labels*')
+    task_labels_files = sorted(glob.glob(GLM_PATH + '*sub*labels*'))
     task_labels = [np.load(f) for f in task_labels_files]
     with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'wb') as f:
             pickle.dump(task_labels, f)
     f.close()
 
-    for b,l in zip(task_beta_files, task_labels_files): # now delete old files
-        os.remove(b)
-        os.remove(l)
+    # sanity check
+    for i,(b,l) in enumerate(zip(task_beta_maps, task_labels)):
+        if b.shape[0] != len(l):
+            print('length mismatch: ', i)
+
+    # for b,l in zip(task_beta_files, task_labels_files): # now delete old files
+    #     os.remove(b)
+    #     os.remove(l)
 
 
 if __name__ == "__main__":
