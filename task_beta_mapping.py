@@ -176,9 +176,9 @@ def aggregate_saved_maps(task):
         if b.shape[0] != len(l):
             print('length mismatch: ', i)
 
-    # for b,l in zip(task_beta_files, task_labels_files): # now delete old files
-    #     os.remove(b)
-    #     os.remove(l)
+    for b,l in zip(task_beta_files, task_labels_files): # now delete old files
+        os.remove(b)
+        os.remove(l)
 
 
 if __name__ == "__main__":

@@ -3,8 +3,8 @@
 #SBATCH --time=23:00:00
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=799M
-#SBATCH -p russpold
+#SBATCH --mem-per-cpu=9G
+#SBATCH -p bigmem
 # Outputs ---------------------------------
 #SBATCH -o  log.out
 #SBATCH -e log.err
@@ -18,7 +18,7 @@ conda activate fa
 # python3 connectivity.py
 # python3 connectome_average.py # also handled by reliability.ipynb
 # python3 srm.py
-python3 task_beta_mapping.py
+# python3 task_beta_mapping.py
 
 # silly stuff from ChatGPT to process an optional --correct_only flag  #### i.e., type: sbatch run.sbatch --correct_only
 while [[ $# -gt 0 ]]; do
