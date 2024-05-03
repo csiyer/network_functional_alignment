@@ -18,7 +18,7 @@ conda activate fa
 # python3 connectivity.py
 # python3 connectome_average.py # also handled by reliability.ipynb
 # python3 srm.py
-# python3 task_beta_mapping.py
+python3 task_beta_mapping.py
 
 # silly stuff from ChatGPT to process an optional --correct_only flag  #### i.e., type: sbatch run.sbatch --correct_only
 while [[ $# -gt 0 ]]; do

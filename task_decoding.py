@@ -12,7 +12,7 @@ Assessing the performance benefit of SRM transformation tests how functionally s
 neural signatures of these cognitive control tasks are.
 
 Author: Chris Iyer
-Updated: 4/2/24
+Updated: 5/2/24
 """
 
 import glob, pickle, argparse
@@ -24,8 +24,6 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
 from joblib import Parallel, delayed
-
-from connectivity import get_combined_mask
 # /oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI
 
 def load_files(task, correct_only = False):
@@ -137,7 +135,7 @@ def plot_performance(tasks, results, savename, save=False):
 
 
 def run_decoding(correct_only):
-    tasks = ['stopSignal','nBack','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
+    tasks = ['stopSignal','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
     results = {
         'aucs_srm' : [],
         'aucs_nosrm' : [],

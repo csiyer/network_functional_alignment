@@ -4,7 +4,7 @@ It then masks this data to save a flattened numpy array with the beta map for ea
 These maps are then loaded in task_decoding.py to decode task states.
 
 Author: Chris Iyer
-Updated: 4/2/24
+Updated: 5/2/24
 """
 
 import os, glob, pickle
@@ -13,10 +13,8 @@ import pandas as pd
 from nilearn.maskers import MultiNiftiMasker
 from nilearn.glm.first_level import FirstLevelModel
 from nilearn.image import concat_imgs
-from joblib import Parallel, delayed
 from connectivity import get_combined_mask
 # /oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/glm_data_MNI
-
 
 def load_files(task):
     """
@@ -34,6 +32,26 @@ def load_files(task):
     confounds_files = [c for c in confounds_files if c[c.find('sub'):c.find('sub')+14] in all_subjects_sessions]
 
     return subjects, data_files, event_files, confounds_files
+
+
+def replace_trial_types(events_df, task):
+    """Replaces values in the trial_type column with desired trial types for decoding, excludes NAs"""
+    
+    with open('utils/task_decoding_conditions.json', 'r') as file:
+        task_conditions = eval(file.read())
+    file.close()
+
+    column_of_interest = task_conditions[task]['colname']
+    trial_type_value_map = task_conditions[task]['values']
+    accepted_values = [i for i in task_conditions[task]['values'].keys()]
+
+    new_df = events_df.copy()
+    new_df = new_df[ new_df[column_of_interest] in accepted_values] # exclude NA trials and others
+
+    for i_trial, trial in new_df.iterrows():
+        new_df.loc[i_trial, 'trial_type'] = trial_type_value_map[trial[column_of_interest]] # replace with desired value as necessary
+    
+    return new_df
 
 
 def glm_lsa(sub, d_file, events, confounds, glm_params):
@@ -71,50 +89,7 @@ def glm_lsa(sub, d_file, events, confounds, glm_params):
     return concat_imgs(beta_series), label_series
 
 
-def glm_lss(sub, d_file, events, confounds, glm_params):
-    """ NOTE: NOT FUNCTIONAL YET (or efficient enough to actually run? idk)
-    Trial-wise GLM modeling, using the Least Squares - Separate approach.
-    Returns:
-        - a list (of length n_trials) of beta maps. 
-        - a list of label tuples of the format (trial_type, 'correct/incorrect')
-    """
-    beta_series = []
-    label_series = []
-    glm_params['subject_label'] = sub
-    glm_params['n_jobs'] = 1 # parallelizing on our own
-
-    def relabel_one_row(df, row_number):
-        """Label one trial for one LSS model. Takes events file and row number of trial to model."""
-        df = df.copy()
-        # Determine which number trial it is *within its condition*
-        trial_condition = df.loc[row_number, "trial_type"]
-        trials_of_this_type_indices = df["trial_type"].loc[df["trial_type"] == trial_condition].index.tolist()
-        trial_number = trials_of_this_type_indices.index(row_number)
-        trial_name = f"{trial_condition}__{trial_number:03d}" # make new trial-specific label
-        df.loc[row_number, "trial_type"] = trial_name
-        return df, trial_name
-    
-    def glm_one_trial(i_trial):
-        lss_events_df, trial_condition = relabel_one_row(events, i_trial)
-        lss_glm = FirstLevelModel(**glm_params)
-        lss_glm.fit(d_file, events=lss_events_df[['onset','duration','trial_type']], confounds=confounds)
-        beta_map = lss_glm.compute_contrast(trial_condition, output_type="effect_size")
-        
-        trial_type = trial_condition.split('__')[0]
-        correct = events.correct_response.iloc[i_trial] == events.key_press.iloc[i_trial] 
-        return beta_map, (trial_type, correct)
-
-    out = Parallel(n_jobs=32) (
-        delayed(glm_one_trial)(i_trial) for i_trial in range(len(events)) 
-    )
-
-    beta_series = [s[0] for s in out]
-    label_series = [s[1] for s in out]
-
-    return concat_imgs(beta_series), label_series
-
-
-def extract_save_beta_maps(task, method='LSA'):
+def extract_save_beta_maps(task):
     """
     For a given task, this function will load necessary files and run
     first level GLM to extract trial-wise beta timeseries (LSS or LSA)
@@ -133,15 +108,13 @@ def extract_save_beta_maps(task, method='LSA'):
     }
 
     for sub, d_file, e_file, c_file in zip(subjects, data_files, event_files, confounds_files):
-        subject_session = d_file[d_file.find('sub'):d_file.find('sub')+7] + '_' + d_file[d_file.find('ses'):d_file.find('ses')+6] 
         events = pd.read_csv(e_file, sep='\t')
+        events = replace_trial_types(events, task)
+
         confounds = pd.read_csv(c_file, sep='\t')
         confounds = confounds[[col for col in confounds.columns if 'cosine' in col or 'trans' in col or 'rot' in col]] # just get cosine and 24 motion regressors
 
-        if method=='LSA':
-            session_beta_maps, session_labels =  glm_lsa(sub, d_file, events, confounds, glm_params)
-        elif method=='LSS':
-            session_beta_maps, session_labels =  glm_lss(sub, d_file, events, confounds, glm_params)
+        session_beta_maps, session_labels =  glm_lsa(sub, d_file, events, confounds, glm_params)
 
         session_beta_maps_masked = MultiNiftiMasker(
             mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
@@ -149,6 +122,7 @@ def extract_save_beta_maps(task, method='LSA'):
             n_jobs = 32
         ).fit_transform(session_beta_maps)
 
+        subject_session = d_file[d_file.find('sub'):d_file.find('sub')+7] + '_' + d_file[d_file.find('ses'):d_file.find('ses')+6] 
         np.save(f'/scratch/users/csiyer/glm_outputs/{task}_{subject_session}_beta_maps.npy', session_beta_maps_masked)
         np.save(f'/scratch/users/csiyer/glm_outputs/{task}_{subject_session}_labels.npy', session_labels)
         
@@ -171,19 +145,14 @@ def aggregate_saved_maps(task):
             pickle.dump(task_labels, f)
     f.close()
 
-    # sanity check
-    for i,(b,l) in enumerate(zip(task_beta_maps, task_labels)):
-        if b.shape[0] != len(l):
-            print('length mismatch: ', i)
-
     for b,l in zip(task_beta_files, task_labels_files): # now delete old files
         os.remove(b)
         os.remove(l)
 
 
 if __name__ == "__main__":
-    tasks = ['stopSignal','nBack','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
+    tasks = ['stopSignal','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
     for task in tasks:
-        extract_save_beta_maps(task, method='LSA')
+        extract_save_beta_maps(task)
         aggregate_saved_maps(task)
         print(f'completed {task}')
