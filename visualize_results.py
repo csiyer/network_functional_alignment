@@ -34,7 +34,7 @@ print(labels)
 ################# 2. statistical tests on decoding results ##############
 cm_srm = [aggregate_cms(task_cms) for task_cms in results['cms_srm']]
 cm_nosrm = [aggregate_cms(task_cms) for task_cms in results['cms_nosrm']]
-task_order = ['stopSignal','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
+task_order = ['flanker','spatialTS','cuedTS','shapeMatching','directedForgetting','stopSignal','goNogo']
 
 # linear MLM
 data = {'method': [], 'task': [], 'auc': []}

@@ -148,7 +148,7 @@ def aggregate_saved_maps(task):
 
 
 if __name__ == "__main__":
-    tasks = ['stopSignal','directedForgetting','goNogo','shapeMatching','spatialTS','cuedTS','flanker']
+    tasks = ['flanker','spatialTS','cuedTS','shapeMatching','directedForgetting','stopSignal','goNogo']
     for task in tasks:
         extract_save_beta_maps(task)
         aggregate_saved_maps(task)
