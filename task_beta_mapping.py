@@ -45,7 +45,7 @@ def replace_trial_types(events_df, task):
     accepted_values = [i for i in task_conditions[task]['values'].keys()]
 
     new_df = events_df.copy()
-    new_df = new_df[ new_df[column_of_interest] in accepted_values] # exclude NA trials and others
+    new_df = new_df[ new_df[column_of_interest].isin(accepted_values)] # exclude NA trials and others
     new_df = new_df.replace({'trial_type': task_conditions[task]['values']}) # replace with desired value as necessary
     
     return new_df
