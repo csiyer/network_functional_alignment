@@ -12,3 +12,5 @@ This repository contains code for functional alignment and task decoding analyse
 5. `task_decoding.py`: decodes task labels of the trial activation estimates producted above, comparing decoding performance with SRM-transformed (i.e., functionally aligned) data to only-anatomically-aligned data.
 6. `visualize_results.ipynb`: knits confusion matrices into a PDF and runs statistical tests on classifier performacne data
 
+
+[Google doc explaining steps in more detail](https://docs.google.com/document/d/13P4QTHxrT5lZfCOXtN59xCKpJfnObtqh3uZkuRqPxR4/edit?pli=1#heading=h.2qncjqtc0b5j)
