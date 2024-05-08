@@ -135,6 +135,7 @@ def run_decoding(correct_only):
     savedir = f'/scratch/users/csiyer/decoding_outputs/current/'
     savelabel = 'withinsubject'
     savename = savedir + savelabel
+    print('saving data: ', savename)
     with open(savename + '.pkl', 'wb') as file:
         pickle.dump(results, file)
     file.close()
