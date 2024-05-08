@@ -1,18 +1,11 @@
 """
-****NEW**** this script now loads trial-wise beta maps rather than raw TR data!
-
-Here, we use transformation matrices from srm.py to transform task data into the shared space.
-
-Then, we decode trial conditions (e.g., congruent vs. incongruent; see full condition list below) 
-between subjects using leave-one-subject-out cross-validation, with and without the SRM transformation. 
-In each fold, all of one subject's sessions are excluded from the training set and tested on, using classifiers trained
-on either SRM'd or raw data from all other subjects. Each TR is classified according to its trial condition.
-
-Assessing the performance benefit of SRM transformation tests how functionally shared or idiosyncratic
-neural signatures of these cognitive control tasks are.
+This is a copy of task_decoding.py that implements within-subject (leave-one-session-out) classification
+instead of across-subject (leave-one-subject-out). This serves as a sanity check-- if classification
+is still at chance in this scenario (especially on trial-balanced tasks like flanker), then something in
+the data is garbage.
 
 Author: Chris Iyer
-Updated: 5/2/24
+Updated: 5/7/24
 """
 
 import glob, pickle, argparse
@@ -66,32 +59,26 @@ def loso_cv(data, labels, subjects):
         concat_data = np.vstack([data[i] for i in idxs])
         concat_labels = np.array([label for i,session_labels in enumerate(labels) if i in idxs for label in session_labels])
         return concat_data, concat_labels 
-
-    def predict_left_out_subject(sub): # train on all but one sub, test on that sub. this fxn is called in the parallel loop.
-        sub_indices = [j for j,s in enumerate(subjects) if s == sub]
-        loso_indices = [j for j,s in enumerate(subjects) if s != sub]
-        
-        train_data, train_labels = concatenate_data_labels(loso_indices)
-        test_data, test_labels = concatenate_data_labels(sub_indices)
-
+    
+    def predict_left_out_session(all_idx, loso_idx):
+        train_data, train_labels = concatenate_data_labels(all_idx[all_idx != loso_idx])
         classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
-        # classifier = SVC(C = 1.0, kernel = 'rbf', class_weight = 'balanced').fit(train_data, train_labels)
-        predicted_labels = classifier.predict(test_data)
-        predicted_probs = classifier._predict_proba_lr(test_data)
+        predicted_probs = classifier._predict_proba_lr(data[loso_idx])
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
             predicted_probs = np.max(predicted_probs, axis=1)
+        auc = roc_auc_score(y_true = labels[loso_idx], y_score = predicted_probs, multi_class='ovr', average='macro')
+        return auc
+    
+    sub_aucs = []
+    for sub in np.unique(subjects):
+        sub_session_idxs = [i for i,s in enumerate(subjects) if s==sub] # indices for each session of this subject
+        # LEAVE ONE SESSION OUT and decode -- parallelized
+        sub_aucs = Parallel(n_jobs = 32)( 
+            delayed(predict_left_out_session)(sub_session_idxs, session_idx) for session_idx in sub_session_idxs
+        ) 
+        sub_aucs.append(np.mean(sub_aucs))
 
-        auc = roc_auc_score(y_true = test_labels, y_score = predicted_probs, multi_class='ovr', average='macro')
-        cm = confusion_matrix(test_labels, predicted_labels)
-        return auc, cm
-
-    auc_cm = Parallel(n_jobs = 32)( 
-        delayed(predict_left_out_subject)(sub) for sub in np.unique(subjects)
-    )
-
-    aucs = [s[0] for s in auc_cm]
-    cms = [s[1] for s in auc_cm]
-    return aucs, cms
+    return sub_aucs
 
 
 def plot_performance(tasks, results, savename, save=False):
@@ -101,7 +88,7 @@ def plot_performance(tasks, results, savename, save=False):
     bar_width = 0.25
     x = np.arange(len(tasks))
     fig, ax = plt.subplots(1,1, figsize = (10,5))
-    fig.suptitle('Trial-by-trial task decoding, SRM-transformed vs. MNI-only')
+    fig.suptitle('Trial-by-trial WITHIN-SUBJECT task decoding, SRM-transformed vs. MNI-only')
     for i in range(len(tasks)):
         x_pair = [x[i] - bar_width/2, x[i]+bar_width/2]
         ax.bar(x_pair, [np.mean(acc_srm[i]), np.mean(acc_nosrm[i])], 
@@ -114,7 +101,7 @@ def plot_performance(tasks, results, savename, save=False):
     ax.set_xlabel('Tasks')
     ax.set_xticks(x)
     ax.set_xticklabels(tasks, rotation = 30)
-    ax.set_ylabel('Leave-one-subject-out classifier ROC-AUC')
+    ax.set_ylabel('Leave-one-session-out classifier ROC-AUC')
     ax.set_ylim(0,1)
     custom_legend = [Patch(color='green', alpha=0.5),  # Green rectangle for 'SRM-transformed'
                     Patch(color='blue', alpha=0.5),   # Blue rectangle for 'MNI only'
@@ -129,9 +116,7 @@ def run_decoding(correct_only):
     tasks = ['flanker','spatialTS','cuedTS','shapeMatching','directedForgetting','stopSignal','goNogo']
     results = {
         'aucs_srm' : [],
-        'aucs_nosrm' : [],
-        'cms_srm' : [],
-        'cms_nosrm' : []
+        'aucs_nosrm' : []
     }
     for task in tasks:
         print(f'starting {task}')
@@ -139,18 +124,16 @@ def run_decoding(correct_only):
         data_srm = srm_transform(data, subjects)
         print(f'loaded data for {task}')
 
-        task_aucs_srm, task_cms_srm = loso_cv(data_srm, labels, subjects)
-        task_aucs_nosrm, task_cms_nosrm = loso_cv(data, labels, subjects)
+        task_aucs_srm = loso_cv(data_srm, labels, subjects)
+        task_aucs_nosrm = loso_cv(data, labels, subjects)
         
         results['aucs_srm'].append(task_aucs_srm)
-        results['cms_srm'].append(task_cms_srm)
         results['aucs_nosrm'].append(task_aucs_nosrm)
-        results['cms_nosrm'].append(task_cms_nosrm)
 
         del data, data_srm, subjects, labels
     
     savedir = f'/scratch/users/csiyer/decoding_outputs/current/'
-    savelabel = 'correctonly' if correct_only else 'alltrials'
+    savelabel = 'withinsubject'
     savename = savedir + savelabel
     with open(savename + '.pkl', 'wb') as file:
         pickle.dump(results, file)
