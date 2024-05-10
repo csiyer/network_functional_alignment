@@ -61,7 +61,7 @@ def loso_cv(data, labels, subjects):
         return concat_data, concat_labels 
     
     def predict_left_out_session(all_idx, loso_idx):
-        train_data, train_labels = concatenate_data_labels(all_idx[all_idx != loso_idx])
+        train_data, train_labels = concatenate_data_labels([idx for idx in all_idx if idx != loso_idx])
         classifier = LinearSVC(C = 1.0, penalty='l1', loss='squared_hinge', class_weight = 'balanced', dual = 'auto').fit(train_data, train_labels)
         predicted_probs = classifier._predict_proba_lr(data[loso_idx])
         if predicted_probs.shape[1] == 2: # binary case, roc_auc_score wants different input
