@@ -11,6 +11,7 @@ This repository contains code for functional alignment and task decoding analyse
 4. `task_beta_mapping.py`: models trial-level activation during cognitive control tasks
 5. `task_decoding.py`: decodes task labels of the trial activation estimates producted above, comparing decoding performance with SRM-transformed (i.e., functionally aligned) data to only-anatomically-aligned data.
 6. `visualize_results.ipynb`: knits confusion matrices into a PDF and runs statistical tests on classifier performacne data
+7. `contrast_map_checks` folder contains scripts that perform alternate (non-decoding) analyses with the contrast maps, to debug / diagnose if the data going into the decoder is garbage
 
 
 [Google doc explaining steps in more detail](https://docs.google.com/document/d/13P4QTHxrT5lZfCOXtN59xCKpJfnObtqh3uZkuRqPxR4/edit?pli=1#heading=h.2qncjqtc0b5j)
