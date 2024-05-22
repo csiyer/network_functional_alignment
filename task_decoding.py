@@ -31,10 +31,10 @@ def load_files(task, correct_only = False):
 
     GLM_PATH = '/scratch/users/csiyer/glm_outputs/'
     subjects = np.load(GLM_PATH + task + '_subjects.npy')
-    with open(f'/scratch/users/csiyer/glm_outputs/{task}_beta_maps.pkl', 'rb') as f:
+    with open(GLM_PATH + task + '_beta_maps.pkl', 'rb') as f:
             data = pickle.load(f)
     f.close()
-    with open(f'/scratch/users/csiyer/glm_outputs/{task}_labels.pkl', 'rb') as f:
+    with open(GLM_PATH + task + '_labels.pkl', 'rb') as f:
             labels_all = pickle.load(f)
     f.close()
 
