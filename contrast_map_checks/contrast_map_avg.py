@@ -12,7 +12,7 @@ import numpy as np
 
 def average_and_save_maps():
     """Step 1: for each subject, for each task condition, average all beta maps across trials/sessions"""
-    
+
     INPATH = '/scratch/users/csiyer/glm_outputs/'
     OUTPATH = '/scratch/users/csiyer/glm_outputs/sub_avg/'
     if not os.path.isdir(OUTPATH):
@@ -83,7 +83,7 @@ def recreate_contrasts():
         os.mkdir(OUTPATH)
 
     for task in ['flanker','spatialTS','cuedTS','directedForgetting','stopSignal','goNogo']: # 'shapeMatching', 'nBack'
-        subjects = np.load(INPATH + task + '_subjects.npy')
+        subjects = np.load('/scratch/users/csiyer/glm_outputs/' + task + '_subjects.npy')
         for sub in np.unique(subjects):
             first_condition_file = INPATH + f'{sub}_{task}_{task_contrast_key[task]["first"]}_avg_beta_map.npy'
             minus_condition_file = INPATH + f'{sub}_{task}_{task_contrast_key[task]["minus"]}_avg_beta_map.npy'
