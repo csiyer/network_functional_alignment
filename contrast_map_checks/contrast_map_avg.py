@@ -87,6 +87,7 @@ def extract_beta_imgs(tasks):
     }
 
     for task in tasks:
+        print('starting first level, task: ' + task)
         subjects, data_files, event_files, confounds_files = load_files(task)
         
         sub_tracker = {}
@@ -131,6 +132,7 @@ def recreate_contrasts(tasks):
     OUTPATH  = '/scratch/users/csiyer/glm_outputs/contrast_estimates/'
 
     for task in tasks:
+        print('starting second level, task: ' + task)
         subjects = np.load('/scratch/users/csiyer/glm_outputs/' + task + '_subjects.npy')
         for sub in np.unique(subjects):
             
@@ -154,4 +156,5 @@ def recreate_contrasts(tasks):
 if __name__ == '__main__':
     tasks = ['flanker','spatialTS','cuedTS','directedForgetting','stopSignal','goNogo'] # 'shapeMatching',
     extract_beta_imgs(tasks)
+    print('finished beta images')
     recreate_contrasts(tasks)
