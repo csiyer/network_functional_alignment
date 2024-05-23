@@ -140,7 +140,7 @@ def recreate_contrasts(tasks):
         subjects = np.load('/scratch/users/csiyer/glm_outputs/' + task + '_subjects.npy')
         for sub in np.unique(subjects):
             
-            beta_list = np.load(TEMP_PATH + f'{task}_{sub}_all-imgs.npy', allow_pickle=True)
+            beta_list = list(np.load(TEMP_PATH + f'{task}_{sub}_all-imgs.npy', allow_pickle=True))
             label_list = [l[0] for l in np.load(TEMP_PATH + f'{task}_{sub}_all-labels.npy')] # just the labels
 
             # create design matrix
