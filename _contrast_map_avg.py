@@ -16,6 +16,7 @@ Author: Chris Iyer
 Updated: 5/22/2024
 """
 
+import os
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -75,6 +76,8 @@ def glm_lsa_edit(sub, d_file, events, confounds, glm_params):
 def extract_beta_imgs(tasks):
     """Step 1: re-derive beta maps and save each trial as its own image"""
     TEMP_PATH = '/scratch/users/csiyer/glm_outputs/trial_beta_imgs/'
+    if not os.path.isdir(TEMP_PATH):
+        os.mkdir(TEMP_PATH)
 
     glm_params = { 
         't_r': 1.49,
