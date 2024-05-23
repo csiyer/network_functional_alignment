@@ -23,8 +23,7 @@ import nibabel as nib
 from nilearn.glm.first_level import FirstLevelModel
 from nilearn.glm.second_level import SecondLevelModel
 
-HOME_DIR = '/home/users/csiyer/network_functional_alignment'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(HOME_DIR), '..')))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from connectivity import get_combined_mask
 from task_beta_mapping import load_files, replace_trial_types
 

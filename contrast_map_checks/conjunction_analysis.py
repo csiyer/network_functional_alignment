@@ -15,6 +15,7 @@ Updated: 5/22/2024
 import os, sys, glob
 import numpy as np
 import nibabel as nib
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 SRM_DIR = '/scratch/users/csiyer/srm_outputs/'
 srm_files = glob.glob(SRM_DIR + '*transform*')
