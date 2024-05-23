@@ -16,8 +16,6 @@ import os, sys, glob
 import numpy as np
 import nibabel as nib
 
-subjects, data_files, event_files, confounds_files = load_files(task)
-
 SRM_DIR = '/scratch/users/csiyer/srm_outputs/'
 srm_files = glob.glob(SRM_DIR + '*transform*')
 
