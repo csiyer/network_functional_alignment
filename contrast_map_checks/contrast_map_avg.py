@@ -149,7 +149,7 @@ def recreate_contrasts(tasks):
             desmat.index = df.index 
 
             # run secondlevelmodel and extract contrast
-            model = SecondLevelModel.fit(beta_list, design_matrix=desmat, n_jobs=8)
+            model = SecondLevelModel(n_jobs=8).fit(beta_list, design_matrix=desmat)
             contrast_outputs = model.compute_contrast(task_contrast_key[task], output_type='all')
 
             # Save each output map
