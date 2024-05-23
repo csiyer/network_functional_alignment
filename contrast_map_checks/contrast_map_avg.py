@@ -141,7 +141,7 @@ def recreate_contrasts(tasks):
         for sub in np.unique(subjects):
             
             beta_list = np.load(TEMP_PATH + f'{task}_{sub}_all-imgs.npy', allow_pickle=True)
-            label_list = np.load(TEMP_PATH + f'{task}_{sub}_all-labels.npy')
+            label_list = [l[0] for l in np.load(TEMP_PATH + f'{task}_{sub}_all-labels.npy')] # just the labels
 
             # create design matrix
             df = pd.DataFrame(label_list, columns=['label'])
