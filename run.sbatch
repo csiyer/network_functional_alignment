@@ -34,4 +34,5 @@ while [[ $# -gt 0 ]]; do
         ;;
     esac
 done
-python3 task_decoding.py --correct_only=${CORRECT_ONLY}
+# python3 task_decoding.py --correct_only=${CORRECT_ONLY}
+python3 _contrast_map_avg.py
