@@ -2,9 +2,9 @@
 #SBATCH -J network_connectivity_csi
 #SBATCH --time=23:00:00
 #SBATCH -n 1
-#SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=9G
-#SBATCH -p bigmem
+#SBATCH --cpus-per-task=8
+#SBATCH --mem-per-cpu=8G
+#SBATCH -p russpold
 # Outputs ---------------------------------
 #SBATCH -o  log.out
 #SBATCH -e log.err
@@ -35,4 +35,4 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 # python3 task_decoding.py --correct_only=${CORRECT_ONLY}
-python3 _contrast_map_avg.py
+python3 contrast_map_checks/contrast_map_avg.py
