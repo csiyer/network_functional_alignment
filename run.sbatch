@@ -3,8 +3,8 @@
 #SBATCH --time=23:00:00
 #SBATCH -n 1
 #SBATCH --cpus-per-task=32
-#SBATCH --mem-per-cpu=9G
-#SBATCH -p bigmem
+#SBATCH --mem-per-cpu=799M
+#SBATCH -p russpold
 # Outputs ---------------------------------
 #SBATCH -o  log.out
 #SBATCH -e log.err

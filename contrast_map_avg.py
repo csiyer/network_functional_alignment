@@ -15,7 +15,7 @@ If they look at all similar, that is a good sign!
 Author: Chris Iyer
 Updated: 5/22/2024
 """
-import os
+
 import numpy as np
 import pandas as pd
 import nibabel as nib
