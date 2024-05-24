@@ -134,6 +134,8 @@ def recreate_contrasts(tasks):
     }
     TEMP_PATH = '/scratch/users/csiyer/glm_outputs/trial_beta_imgs/'
     OUTPATH  = '/scratch/users/csiyer/glm_outputs/contrast_estimates/'
+    if not os.path.isdir(OUTPATH):
+        os.mkdir(OUTPATH)
 
     for task in tasks:
         print('starting second level, task: ' + task)
