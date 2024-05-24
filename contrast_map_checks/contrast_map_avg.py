@@ -125,12 +125,12 @@ def recreate_contrasts(tasks):
     """Step 2: for each subject, reconstruct contrasts of interest with the maps created above"""
 
     task_contrast_key = {
-        'cuedTS': {'tswitch_cswitch-tstay_cswitch' },
-        'directedForgetting': {'neg-con' },
-        'flanker': {'incongruent-congruent' },
-        'spatialTS': {'tswitch_cswitch-tstay_cswitch' },
-        'goNogo': {'no-go_success-go' }, 
-        'stopSignal': {'stop_failure-go' },
+        'cuedTS': 'tswitch_cswitch-tstay_cswitch',
+        'directedForgetting': 'neg-con',
+        'flanker': 'incongruent-congruent',
+        'spatialTS': 'tswitch_cswitch-tstay_cswitch',
+        'goNogo': 'no-go_success-go', 
+        'stopSignal': 'stop_failure-go',
     }
     TEMP_PATH = '/scratch/users/csiyer/glm_outputs/trial_beta_imgs/'
     OUTPATH  = '/scratch/users/csiyer/glm_outputs/contrast_estimates/'
