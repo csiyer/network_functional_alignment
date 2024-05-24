@@ -129,9 +129,15 @@ def recreate_contrasts(tasks):
         'directedForgetting': 'neg-con',
         'flanker': 'incongruent-congruent',
         'spatialTS': 'tswitch_cswitch-tstay_cswitch',
-        'goNogo': 'no-go_success-go', 
+        'goNogo': 'nogo_success-go', 
         'stopSignal': 'stop_failure-go',
     }
+    gng_transform = {
+        'go': 'go',
+        'no-go_success': 'nogo_success',
+        'no-go_failure': 'nogo_failure'
+    }
+
     TEMP_PATH = '/scratch/users/csiyer/glm_outputs/trial_beta_imgs/'
     OUTPATH  = '/scratch/users/csiyer/glm_outputs/contrast_estimates/'
     if not os.path.isdir(OUTPATH):
@@ -144,6 +150,9 @@ def recreate_contrasts(tasks):
             
             beta_list = list(np.load(TEMP_PATH + f'{task}_{sub}_all-imgs.npy', allow_pickle=True))
             label_list = [l[0] for l in np.load(TEMP_PATH + f'{task}_{sub}_all-labels.npy')] # just the labels
+
+            if task == 'goNogo':
+                label_list = [gng_transform[l] for l in label_list] # remove hyphens in labels, which mess with compute_contrast
 
             # create design matrix
             df = pd.DataFrame(label_list, columns=['label'])
