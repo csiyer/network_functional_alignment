@@ -80,9 +80,9 @@ def run_conjunction_analysis(save=True):
     Main conjunction analysis script. Loops through contrast files, quantifies overlap and dice coefficients, 
     and saves output to json. 
     """
-    output = {}
+    results = {}
     for task in ['flanker','spatialTS','cuedTS','directedForgetting','stopSignal','goNogo', 'shapeMatching', 'nBack']:
-        output[task] = {
+        results[task] = {
             'srm': {'all_r': [], 'all_dice': []},
             'nosrm': {'all_r': [], 'all_dice': []}
         }
@@ -104,27 +104,27 @@ def run_conjunction_analysis(save=True):
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
             
             r, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
-            output[task]['nosrm']['all_r'].append(r)
-            output[task]['nosrm']['all_dice'].append(dice)
+            results[task]['nosrm']['all_r'].append(r)
+            results[task]['nosrm']['all_dice'].append(dice)
 
             r, dice = dice_coef(
                 np.dot(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
                 np.dot(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform'])
             )
 
-            output[task]['srm']['all_r'].append(r)
-            output[task]['srm']['all_dice'].append(dice)
+            results[task]['srm']['all_r'].append(r)
+            results[task]['srm']['all_dice'].append(dice)
 
         for method in ['srm', 'nosrm']: # get averages
-            output[task][method]['avg_r'] = np.mean(output[task][method]['all_r'])
-            output[task][method]['avg_dice'] = np.mean(output[task][method]['all_dice'])
+            results[task][method]['avg_r'] = np.mean(results[task][method]['all_r'])
+            results[task][method]['avg_dice'] = np.mean(results[task][method]['all_dice'])
         
     if save: 
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
         if not os.path.isdir(OUTPATH):
             os.mkdir(OUTPATH)
-        with open(OUTPATH + 'outputs.json', 'w') as file:
-            json.dump(output, file, indent=4)
+        with open(OUTPATH + 'results.json', 'w') as file:
+            json.dump(results, file, indent=4)
 
     return results
 
