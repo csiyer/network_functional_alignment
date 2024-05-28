@@ -121,7 +121,7 @@ def run_conjunction_analysis(save=True):
         
     if save: 
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
-        if not os.isdir(OUTPATH):
+        if not os.path.isdir(OUTPATH):
             os.mkdir(OUTPATH)
         with open(OUTPATH + 'outputs.json', 'w') as file:
             json.dump(output, file, indent=4)
