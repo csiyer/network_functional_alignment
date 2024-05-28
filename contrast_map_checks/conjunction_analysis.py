@@ -152,7 +152,7 @@ def plot_results(results, save=True):
     plt.tight_layout()
     
     if save:
-        plt.savefig("results_plot.png")
+        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results.png')
     else:
         plt.show()
 
