@@ -33,6 +33,8 @@ def edit_session_labels_gng(session_labels):  # change 'no-go' to 'no-go_success
         (l[0] + ('_success' if l[1] else '_failure'), l[1]) if l[0] == 'no-go' else l
             for l in session_labels
     ]
+    gng_transform = {'no-go_success': 'nogo_success', 'no-go_failure': 'nogo_failure'}
+    new_session_labels = [gng_transform(l) for l in new_session_labels if l in gng_transform.keys()]
     return new_session_labels
 
 
@@ -132,11 +134,6 @@ def recreate_contrasts(tasks):
         'goNogo': 'nogo_success-go', 
         'stopSignal': 'stop_failure-go',
     }
-    gng_transform = {
-        'go': 'go',
-        'no-go_success': 'nogo_success',
-        'no-go_failure': 'nogo_failure'
-    }
 
     TEMP_PATH = '/scratch/users/csiyer/glm_outputs/trial_beta_imgs/'
     OUTPATH  = '/scratch/users/csiyer/glm_outputs/contrast_estimates/'
@@ -150,9 +147,6 @@ def recreate_contrasts(tasks):
             
             beta_list = list(np.load(TEMP_PATH + f'{task}_{sub}_all-imgs.npy', allow_pickle=True))
             label_list = [l[0] for l in np.load(TEMP_PATH + f'{task}_{sub}_all-labels.npy')] # just the labels
-
-            if task == 'goNogo':
-                label_list = [gng_transform[l] for l in label_list] # remove hyphens in labels, which mess with compute_contrast
 
             # create design matrix
             df = pd.DataFrame(label_list, columns=['label'])
