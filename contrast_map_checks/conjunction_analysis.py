@@ -17,6 +17,7 @@ import os, sys, glob, json, itertools
 import numpy as np
 import nibabel as nib
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 CONTRAST_PATH = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/output_optcom_MNI/'
@@ -91,7 +92,7 @@ def run_conjunction_analysis(save=True):
             'contrast_map': nib.load( glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0] )
         } for sub in subjects}
 
-        for sub1, sub2 in itertools.combinations(subjects, 2):
+        for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
 
             _, overlap, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
             output[task]['nosrm']['all_overlap'].append(overlap)
@@ -104,11 +105,10 @@ def run_conjunction_analysis(save=True):
             output[task]['srm']['all_overlap'].append(overlap)
             output[task]['srm']['all_dice'].append(dice)
 
-        for method in ['srm', 'nosrm']:
+        for method in ['srm', 'nosrm']: # get averages
             output[task][method]['avg_overlap'] = np.mean(output[task][method]['all_overlap'])
             output[task][method]['avg_dice'] = np.mean(output[task][method]['all_dice'])
         
-    # save outputs
     if save: 
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
         if not os.isdir(OUTPATH):
@@ -120,7 +120,42 @@ def run_conjunction_analysis(save=True):
 
 
 def plot_results(results, save=True):
-    pass        
+    tasks = list(results.keys())
+    fig, axes = plt.subplots(2,1, figsize=(8, 8))
+    
+    # Subplot for Overlapping Voxels
+    axes[0].set_title("Contrast Map # Overlapping Voxels")
+    axes[0].set_ylabel("Average Overlap")
+    axes[0].set_xticks(range(len(tasks)))
+    axes[0].set_xticklabels(tasks, rotation=45, ha='right')
+    
+    # Subplot for Dice Coefficients
+    axes[1].set_title("Contrast Map Dice Coefficients")
+    axes[1].set_ylabel("Average Dice Coefficient")
+    axes[1].set_xticks(range(len(tasks)))
+    axes[1].set_xticklabels(tasks, rotation=45, ha='right')
+    
+    # Plot data
+    for i, task in enumerate(tasks):
+        axes[0].bar(i - 0.2, results[task]['srm']['avg_overlap'], yerr=np.std(results[task]['srm']['all_overlap']), 
+                    width=0.4, label='SRM' if i == 0 else "", color='green', capsize=5, alpha = 0.5)
+        axes[0].bar(i + 0.2, results[task]['nosrm']['avg_overlap'], yerr=np.std(results[task]['nosrm']['all_overlap']), 
+                    width=0.4, label='No SRM' if i == 0 else "", color='blue', capsize=5, alpha = 0.5)
+        
+        axes[1].bar(i - 0.2, results[task]['srm']['avg_dice'], yerr=np.std(results[task]['srm']['all_dice']), 
+                    width=0.4, label='SRM' if i == 0 else "", color='green', capsize=5, alpha = 0.5)
+        axes[1].bar(i + 0.2, results[task]['nosrm']['avg_dice'], yerr=np.std(results[task]['nosrm']['all_dice']), 
+                    width=0.4, label='No SRM' if i == 0 else "", color='blue', capsize=5, alpha = 0.5)
+
+    axes[0].legend()
+    axes[1].legend()
+    plt.tight_layout()
+    
+    if save:
+        plt.savefig("results_plot.png")
+    else:
+        plt.show()
+
 
 if __name__ == '__main__':
     results = run_conjunction_analysis()
