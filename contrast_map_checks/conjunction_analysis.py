@@ -13,10 +13,13 @@ Updated: 5/28/2024
 """
 import os, sys, glob, json, itertools
 import numpy as np
-import nibabel as nib
 from sklearn.preprocessing import StandardScaler
+from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
+from nilearn.maskers import NiftiMasker
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from connectivity import get_combined_mask
 
 CONTRAST_PATH = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/output_optcom_MNI/'
 SRM_DIR = '/scratch/users/csiyer/srm_outputs/'
@@ -34,7 +37,7 @@ target_contrasts = {
 }
 
 def srm_transform(map, transform, zscore=True):
-    out = np.dot(map.get_fdata(), transform)
+    out = np.dot(map, transform)
     if zscore:
         out = StandardScaler().fit_transform(out) 
     return out
@@ -42,17 +45,17 @@ def srm_transform(map, transform, zscore=True):
 
 def dice_coef(map1, map2):
     """
-    Takes in two nibabel Nifti objects (binarized maps); binarizes them and returns:
-        1) map of overlapping voxels
-        2) count of overlapping voxels
-        3) dice coefficient of the maps
+    Takes in two maps (masked into numpy arrays), binarizes them if necessary, and returns:
+        1) correlation of maps
+        2) dice coefficient of maps
     """
-    if isinstance(map1, nib.Nifti1Image) and isinstance(map2, nib.Nifti1Image):
-        data1 = map1.get_fdata()
-        data2 = map2.get_fdata()
-    elif isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
+    # if isinstance(map1, nib.Nifti1Image) and isinstance(map2, nib.Nifti1Image):
+    #     data1 = map1.get_fdata()
+    #     data2 = map2.get_fdata()
+    if isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
         data1 = map1
         data2 = map2
+
     if data1.shape != data2.shape:
         raise ValueError("ERROR: shape mismatch")
     
@@ -61,15 +64,15 @@ def dice_coef(map1, map2):
         data1 = np.where(data1 > 0, 1, 0) # binarize
         data2 = np.where(data2 > 0, 1, 0)
 
-    overlap_map = data1*data2
-    intersection = np.sum(overlap_map)
-    sum_binarized = np.sum(data1) + np.sum(data2)
+    correlation = pearsonr(map1, map2)
 
+    intersection = np.sum(data1*data2)
+    sum_binarized = np.sum(data1) + np.sum(data2)
     if sum_binarized == 0:
         return 1.0 if intersection == 0 else 0.0
-    
     dice = 2.0 * intersection / sum_binarized
-    return overlap_map, intersection, dice
+
+    return correlation, dice
 
 
 def run_conjunction_analysis(save=True):
@@ -88,9 +91,14 @@ def run_conjunction_analysis(save=True):
         full_task_fname = CONTRAST_PATH + f'{task}_lev1_output/task_{task}_rtmodel_rt_centered/contrast_estimates/'
 
         # create a data dictionary mapping subject names to both SRM transforms and contrast maps
+
         sub_dict = {sub: {
             'srm_transform': np.load([s for s in srm_files if sub in s][0]),
-            'contrast_map': nib.load( glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0] )
+            'contrast_map': NiftiMasker(
+                mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
+                standardize = 'zscore_sample',
+                n_jobs = -1
+            ).fit_transform(glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0])
         } for sub in subjects}
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
@@ -98,8 +106,8 @@ def run_conjunction_analysis(save=True):
             output[task]['nosrm']['all_overlap'].append(overlap)
             output[task]['nosrm']['all_dice'].append(dice)
             _, overlap, dice = dice_coef(
-                srm_transform(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
-                srm_transform(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform']),
+                np.dot(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
+                np.dot(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform'])
             )
             output[task]['srm']['all_overlap'].append(overlap)
             output[task]['srm']['all_dice'].append(dice)
@@ -122,9 +130,9 @@ def plot_results(results, save=True):
     tasks = list(results.keys())
     fig, axes = plt.subplots(2,1, figsize=(8, 8))
     
-    # Subplot for Overlapping Voxels
-    axes[0].set_title("Contrast Map # Overlapping Voxels")
-    axes[0].set_ylabel("Average Overlap")
+    # Subplot for Correlations
+    axes[0].set_title("Contrast Map Correlation")
+    axes[0].set_ylabel("Average Pearson r")
     axes[0].set_xticks(range(len(tasks)))
     axes[0].set_xticklabels(tasks, rotation=45, ha='right')
     
