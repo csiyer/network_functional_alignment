@@ -64,7 +64,7 @@ def dice_coef(map1, map2):
         data1 = np.where(data1 > 0, 1, 0) # binarize
         data2 = np.where(data2 > 0, 1, 0)
 
-    correlation, _ = pearsonr(map1, map2)
+    correlation, _ = pearsonr(data1, data2)
 
     intersection = np.sum(data1*data2)
     sum_binarized = np.sum(data1) + np.sum(data2)
