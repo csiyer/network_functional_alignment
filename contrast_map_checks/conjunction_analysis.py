@@ -53,8 +53,8 @@ def dice_coef(map1, map2):
     #     data1 = map1.get_fdata()
     #     data2 = map2.get_fdata()
     if isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
-        data1 = map1
-        data2 = map2
+        data1 = map1[0,:]
+        data2 = map2[0,:]
 
     if data1.shape != data2.shape:
         raise ValueError("ERROR: shape mismatch")
@@ -64,7 +64,7 @@ def dice_coef(map1, map2):
         data1 = np.where(data1 > 0, 1, 0) # binarize
         data2 = np.where(data2 > 0, 1, 0)
 
-    correlation = pearsonr(map1, map2)
+    correlation, _ = pearsonr(map1, map2)
 
     intersection = np.sum(data1*data2)
     sum_binarized = np.sum(data1) + np.sum(data2)
@@ -83,8 +83,8 @@ def run_conjunction_analysis(save=True):
     output = {}
     for task in ['flanker','spatialTS','cuedTS','directedForgetting','stopSignal','goNogo', 'shapeMatching', 'nBack']:
         output[task] = {
-            'srm': {'all_overlap': [], 'all_dice': []},
-            'nosrm': {'all_overlap': [], 'all_dice': []}
+            'srm': {'all_r': [], 'all_dice': []},
+            'nosrm': {'all_r': [], 'all_dice': []}
         }
 
         subjects = np.unique(np.load(f'/scratch/users/csiyer/glm_outputs/{task}_subjects.npy'))
@@ -102,18 +102,21 @@ def run_conjunction_analysis(save=True):
         } for sub in subjects}
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
-            _, overlap, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
-            output[task]['nosrm']['all_overlap'].append(overlap)
+            
+            r, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
+            output[task]['nosrm']['all_r'].append(r)
             output[task]['nosrm']['all_dice'].append(dice)
-            _, overlap, dice = dice_coef(
+
+            r, dice = dice_coef(
                 np.dot(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
                 np.dot(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform'])
             )
-            output[task]['srm']['all_overlap'].append(overlap)
+
+            output[task]['srm']['all_r'].append(r)
             output[task]['srm']['all_dice'].append(dice)
 
         for method in ['srm', 'nosrm']: # get averages
-            output[task][method]['avg_overlap'] = np.mean(output[task][method]['all_overlap'])
+            output[task][method]['avg_r'] = np.mean(output[task][method]['all_r'])
             output[task][method]['avg_dice'] = np.mean(output[task][method]['all_dice'])
         
     if save: 
@@ -144,9 +147,9 @@ def plot_results(results, save=True):
     
     # Plot data
     for i, task in enumerate(tasks):
-        axes[0].bar(i - 0.2, results[task]['srm']['avg_overlap'], yerr=np.std(results[task]['srm']['all_overlap']), 
+        axes[0].bar(i - 0.2, results[task]['srm']['avg_r'], yerr=np.std(results[task]['srm']['all_r']), 
                     width=0.4, label='SRM' if i == 0 else "", color='green', capsize=5, alpha = 0.5)
-        axes[0].bar(i + 0.2, results[task]['nosrm']['avg_overlap'], yerr=np.std(results[task]['nosrm']['all_overlap']), 
+        axes[0].bar(i + 0.2, results[task]['nosrm']['avg_r'], yerr=np.std(results[task]['nosrm']['all_r']), 
                     width=0.4, label='No SRM' if i == 0 else "", color='blue', capsize=5, alpha = 0.5)
         
         axes[1].bar(i - 0.2, results[task]['srm']['avg_dice'], yerr=np.std(results[task]['srm']['all_dice']), 
