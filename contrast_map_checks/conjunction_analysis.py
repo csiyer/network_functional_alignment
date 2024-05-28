@@ -11,8 +11,6 @@ and compare across-subject alignment, in 2 ways:
 Author: Chris Iyer
 Updated: 5/28/2024
 """
-"""CONJUNCTION ANALYSIS"""
-
 import os, sys, glob, json, itertools
 import numpy as np
 import nibabel as nib
@@ -41,6 +39,7 @@ def srm_transform(map, transform, zscore=True):
         out = StandardScaler().fit_transform(out) 
     return out
 
+
 def dice_coef(map1, map2):
     """
     Takes in two nibabel Nifti objects (binarized maps); binarizes them and returns:
@@ -54,11 +53,13 @@ def dice_coef(map1, map2):
     elif isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
         data1 = map1
         data2 = map2
-
-    if map1.shape != map2.shape:
+    if data1.shape != data2.shape:
         raise ValueError("ERROR: shape mismatch")
-    if np.unique(map1) != [0,1] or np.unique(map2) != [0,1]:
-        raise ValueError("ERROR: non-binarized maps")
+    
+    if not np.array_equal(np.unique(data1), [0,1]) or not np.array_equal(np.unique(data2), [0,1]):
+        print('maps not thresholded, binarizing...')
+        data1 = np.where(data1 > 0, 1, 0) # binarize
+        data2 = np.where(data2 > 0, 1, 0)
 
     overlap_map = data1*data2
     intersection = np.sum(overlap_map)
@@ -93,11 +94,9 @@ def run_conjunction_analysis(save=True):
         } for sub in subjects}
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
-
             _, overlap, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
             output[task]['nosrm']['all_overlap'].append(overlap)
             output[task]['nosrm']['all_dice'].append(dice)
-
             _, overlap, dice = dice_coef(
                 srm_transform(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
                 srm_transform(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform']),
