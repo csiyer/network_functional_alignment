@@ -17,9 +17,11 @@ from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from nilearn.maskers import NiftiMasker
+from nilearn.image import binarize_img
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from connectivity import get_combined_mask
+
 
 CONTRAST_PATH = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/output_optcom_MNI/'
 SRM_DIR = '/scratch/users/csiyer/srm_outputs/'
@@ -35,6 +37,16 @@ target_contrasts = {
     'goNogo': 'goNogo_contrast-nogo_success-go',
     'stopSignal': 'stopSignal_contrast-stop_failure-go'
 }
+
+def binarize_and_mask(img_path, threshold_val):
+    # return image.binarize_img(img, threshold=threshold_val, mask_img=get_combined_mask(local=True))
+    img_masked = NiftiMasker(
+        mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
+        standardize = 'zscore_sample',
+        n_jobs = -1
+    ).fit_transform(img_path)
+    return np.where(img_masked > threshold_val, 1, 0)
+
 
 def srm_transform(map, transform, zscore=True):
     out = np.dot(map, transform)
@@ -91,14 +103,9 @@ def run_conjunction_analysis(save=True):
         full_task_fname = CONTRAST_PATH + f'{task}_lev1_output/task_{task}_rtmodel_rt_centered/contrast_estimates/'
 
         # create a data dictionary mapping subject names to both SRM transforms and contrast maps
-
         sub_dict = {sub: {
             'srm_transform': np.load([s for s in srm_files if sub in s][0]),
-            'contrast_map': NiftiMasker(
-                mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
-                standardize = 'zscore_sample',
-                n_jobs = -1
-            ).fit_transform(glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0])
+            'contrast_map': binarize_and_mask(glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0], threshold_val=2)
         } for sub in subjects}
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
