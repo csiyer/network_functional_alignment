@@ -22,6 +22,8 @@ from connectivity import get_combined_mask
 ###########################################
 
 OUTPATH = 'outputs/glm/visualizations/'
+thresholded = False
+if not thresholded: OUTPATH += 'unthresholded/'
 
 trial_contrast_files = sorted(glob.glob('outputs/glm/contrast_estimates/*stat*'))
 true_contrast_files = sorted(glob.glob('outputs/glm/true_contrasts/*t-test*'))
@@ -64,14 +66,18 @@ for task in tasks:
         print(sub)
         
         anat_img = nib.load(anat_file)
-        trial_map = binarize_and_mask(nib.load(trial_contrast), threshold_val = threshold_val)
-        true_map = binarize_and_mask(nib.load(true_contrast), threshold_val = threshold_val)
+    
+        trial_map = nib.load(trial_contrast)
+        true_map = nib.load(true_contrast)
+        if thresholded:
+            trial_map = binarize_and_mask(trial_map, threshold_val)
+            true_map = binarize_and_mask(true_map, threshold_val)
         
         plotting.plot_stat_map(trial_map, bg_img=anat_img, cmap='cold_hot', axes=axes[i][0], display_mode='z', cut_coords=slices, title=f'{sub}, trial aggregate contrast')
         plotting.plot_stat_map(true_map, bg_img=anat_img, cmap='cold_hot', axes=axes[i][1], display_mode='z', cut_coords=slices, title=f'{sub}, GLM contrast')
 
-        plt.subplots_adjust(hspace=0)
-        f.savefig(OUTPATH +f'task-{task}_contrast_visualizations.pdf')
-        # plt.show()
-        plt.close()
+    plt.subplots_adjust(hspace=0)
+    f.savefig(OUTPATH +f'task-{task}_contrast_visualizations.pdf')
+    # plt.show()
+    plt.close()
         
