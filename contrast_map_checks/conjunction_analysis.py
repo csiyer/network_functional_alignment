@@ -111,7 +111,7 @@ def run_conjunction_analysis(save=True):
             }
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
-            
+
             ### No SRM version
             dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
             r, _ = pearsonr(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
@@ -133,7 +133,7 @@ def run_conjunction_analysis(save=True):
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
         if not os.path.isdir(OUTPATH):
             os.mkdir(OUTPATH)
-        with open(OUTPATH + 'results.json', 'w') as file:
+        with open(OUTPATH + 'results_new.json', 'w') as file:
             json.dump(results, file, indent=4)
 
     return results
@@ -172,7 +172,7 @@ def plot_results(results, save=True):
     plt.tight_layout()
     
     if save:
-        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results.png')
+        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results_new.png')
     else:
         plt.show()
 
