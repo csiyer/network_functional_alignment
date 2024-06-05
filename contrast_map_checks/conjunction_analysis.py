@@ -38,53 +38,50 @@ target_contrasts = {
     'stopSignal': 'stopSignal_contrast-stop_failure-go'
 }
 
-def binarize_and_mask(img_path, threshold_val):
+def mask(img_path):
     # return image.binarize_img(img, threshold=threshold_val, mask_img=get_combined_mask(local=True))
-    img_masked = NiftiMasker(
+    return NiftiMasker(
         mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
         standardize = 'zscore_sample',
         n_jobs = -1
-    ).fit_transform(img_path)
-    return np.where(img_masked > threshold_val, 1, 0)
+    ).fit_transform(img_path)[0,:] # just first slice (contrast maps are 2D)
 
 
-def srm_transform(map, transform, zscore=True):
-    out = np.dot(map, transform)
-    if zscore:
-        out = StandardScaler().fit_transform(out) 
-    return out
+def srm_and_s1_native(map, sub_transform, s1_transform):
+    """Accepts a contrast map and which subject it belongs to, and dictionary of data. 
+    Transforms the map into shared space and then back into the first subject's native space."""
+    srm_data = np.dot(map, sub_transform)
+    return np.dot(srm_data, s1_transform.T)
 
 
-def dice_coef(map1, map2):
+def dice_coef(map1, map2, threshold_val = 2):
     """
-    Takes in two maps (masked into numpy arrays), binarizes them if necessary, and returns:
-        1) correlation of maps
-        2) dice coefficient of maps
+    Takes in two maps (masked into numpy arrays), and returns:
+        1) correlation of unthresholded maps
+        2) dice coefficient of binarized/thresholded maps
     """
+    if map1.shape != map2.shape:
+        raise ValueError("ERROR: shape mismatch")
+    if np.array_equal(np.unique(map1), [0,1]) or np.array_equal(np.unique(map2), [0,1]):
+        raise ValueError("ERROR: maps already binarized?")
     # if isinstance(map1, nib.Nifti1Image) and isinstance(map2, nib.Nifti1Image):
     #     data1 = map1.get_fdata()
     #     data2 = map2.get_fdata()
-    if isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
-        data1 = map1[0,:]
-        data2 = map2[0,:]
+    # if isinstance(map1, np.ndarray) and isinstance(map2, np.ndarray):
+    #     data1 = map1[0,:]
+    #     data2 = map2[0,:]
 
-    if data1.shape != data2.shape:
-        raise ValueError("ERROR: shape mismatch")
-    
-    if not np.array_equal(np.unique(data1), [0,1]) or not np.array_equal(np.unique(data2), [0,1]):
-        print('maps not thresholded, binarizing...')
-        data1 = np.where(data1 > 0, 1, 0) # binarize
-        data2 = np.where(data2 > 0, 1, 0)
+    # binarize
+    map1 = np.where(map1 > threshold_val, 1, 0) # binarize
+    map2 = np.where(map2 > threshold_val, 1, 0)
 
-    correlation, _ = pearsonr(data1, data2)
-
-    intersection = np.sum(data1*data2)
-    sum_binarized = np.sum(data1) + np.sum(data2)
+    intersection = np.sum(map1*map2)
+    sum_binarized = np.sum(map1) + np.sum(map2)
     if sum_binarized == 0:
         return 1.0 if intersection == 0 else 0.0
     dice = 2.0 * intersection / sum_binarized
 
-    return correlation, dice
+    return dice
 
 
 def run_conjunction_analysis(save=True):
@@ -102,26 +99,32 @@ def run_conjunction_analysis(save=True):
         subjects = np.unique(np.load(f'/scratch/users/csiyer/glm_outputs/{task}_subjects.npy'))
         full_task_fname = CONTRAST_PATH + f'{task}_lev1_output/task_{task}_rtmodel_rt_centered/contrast_estimates/'
 
-        # create a data dictionary mapping subject names to both SRM transforms and contrast maps
-        sub_dict = {sub: {
-            'srm_transform': np.load([s for s in srm_files if sub in s][0]),
-            'contrast_map': binarize_and_mask(glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0], threshold_val=2)
-        } for sub in subjects}
+        # construct dictionary of all maps to be compared
+        sub_dict = {}
+        s1_transform = np.load(sorted(srm_files)[0]) # first subject's srm transform, to put all SRM'd data back in this native space
+        for sub in subjects:
+            contrast_map = mask(glob.glob(full_task_fname + f'{sub}*{target_contrasts[task]}*t-test.nii.gz')[0])
+            srm_transform = np.load([s for s in srm_files if sub in s][0])
+            sub_dict[sub] = {
+                'contrast_map': contrast_map,
+                'contrast_map_srm': srm_and_s1_native(contrast_map, srm_transform, s1_transform)
+            }
 
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
             
-            r, dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
+            ### No SRM version
+            dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
+            r, _ = pearsonr(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
             results[task]['nosrm']['all_r'].append(r)
             results[task]['nosrm']['all_dice'].append(dice)
 
-            r, dice = dice_coef(
-                np.dot(sub_dict[sub1]['contrast_map'], sub_dict[sub1]['srm_transform']),
-                np.dot(sub_dict[sub2]['contrast_map'], sub_dict[sub2]['srm_transform'])
-            )
-
+            ### SRM version
+            dice = dice_coef(sub_dict[sub1]['contrast_map_srm'], sub_dict[sub2]['contrast_map_srm'])
+            r, _ = pearsonr(sub_dict[sub1]['contrast_map_srm'], sub_dict[sub2]['contrast_map_srm'])
             results[task]['srm']['all_r'].append(r)
             results[task]['srm']['all_dice'].append(dice)
 
+        # average results
         for method in ['srm', 'nosrm']: # get averages
             results[task][method]['avg_r'] = np.mean(results[task][method]['all_r'])
             results[task][method]['avg_dice'] = np.mean(results[task][method]['all_dice'])
