@@ -83,7 +83,7 @@ def dice_coef(map1, map2, threshold_val = 2):
     return dice
 
 
-def run_conjunction_analysis(save=True):
+def run_conjunction_analysis(threshold_val = 2, save=True):
     """
     Main conjunction analysis script. Loops through contrast files, quantifies overlap and dice coefficients, 
     and saves output to json. 
@@ -112,13 +112,13 @@ def run_conjunction_analysis(save=True):
         for sub1, sub2 in itertools.combinations(subjects, 2): # for each possible pair, compare maps
 
             ### No SRM version
-            dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
+            dice = dice_coef(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'], threshold_val = threshold_val)
             r, _ = pearsonr(sub_dict[sub1]['contrast_map'], sub_dict[sub2]['contrast_map'])
             results[task]['nosrm']['all_r'].append(r)
             results[task]['nosrm']['all_dice'].append(dice)
 
             ### SRM version
-            dice = dice_coef(sub_dict[sub1]['contrast_map_srm'], sub_dict[sub2]['contrast_map_srm'])
+            dice = dice_coef(sub_dict[sub1]['contrast_map_srm'], sub_dict[sub2]['contrast_map_srm'], threshold_val = threshold_val)
             r, _ = pearsonr(sub_dict[sub1]['contrast_map_srm'], sub_dict[sub2]['contrast_map_srm'])
             results[task]['srm']['all_r'].append(r)
             results[task]['srm']['all_dice'].append(dice)
@@ -138,7 +138,7 @@ def run_conjunction_analysis(save=True):
     return results
 
 
-def plot_results(results, save=True):
+def plot_results(results, save=True, savetag = ''):
     tasks = list(results.keys())
     fig, axes = plt.subplots(2,1, figsize=(8, 8))
     
@@ -171,7 +171,7 @@ def plot_results(results, save=True):
     plt.tight_layout()
     
     if save:
-        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results.png')
+        plt.savefig(f'/scratch/users/csiyer/conjunction_analysis/results_{savetag}.png')
     else:
         plt.show()
 
