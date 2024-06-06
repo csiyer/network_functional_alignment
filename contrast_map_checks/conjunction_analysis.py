@@ -9,17 +9,16 @@ and compare across-subject alignment, in 2 ways:
     2) Dice coefficient of unthresholded maps (SRM-transformed vs. not)
 
 Author: Chris Iyer
-Updated: 5/28/2024
+Updated: 6/5/2024
 """
+
 import os, sys, glob, json, itertools
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from nilearn.maskers import NiftiMasker
-from nilearn.image import binarize_img
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from connectivity import get_combined_mask
 
 
@@ -38,11 +37,11 @@ target_contrasts = {
     'stopSignal': 'stopSignal_contrast-stop_failure-go'
 }
 
+
 def mask(img_path):
     # return image.binarize_img(img, threshold=threshold_val, mask_img=get_combined_mask(local=True))
     return NiftiMasker(
         mask_img = get_combined_mask(), # mask where gray matter above 50% and the parcellation applies
-        standardize = 'zscore_sample',
         n_jobs = -1
     ).fit_transform(img_path)[0,:] # just first slice (contrast maps are 2D)
 
@@ -133,7 +132,7 @@ def run_conjunction_analysis(save=True):
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
         if not os.path.isdir(OUTPATH):
             os.mkdir(OUTPATH)
-        with open(OUTPATH + 'results_new.json', 'w') as file:
+        with open(OUTPATH + 'results.json', 'w') as file:
             json.dump(results, file, indent=4)
 
     return results
@@ -172,7 +171,7 @@ def plot_results(results, save=True):
     plt.tight_layout()
     
     if save:
-        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results_new.png')
+        plt.savefig('/scratch/users/csiyer/conjunction_analysis/results.png')
     else:
         plt.show()
 
