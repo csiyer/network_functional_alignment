@@ -53,7 +53,7 @@ def srm_and_s1_native(map, sub_transform, s1_transform):
     return np.dot(srm_data, s1_transform.T)
 
 
-def dice_coef(map1, map2, threshold_val = 2):
+def dice_coef(map1, map2, threshold_val=2):
     """
     Takes in two maps (masked into numpy arrays), and returns:
         1) correlation of unthresholded maps
@@ -83,7 +83,7 @@ def dice_coef(map1, map2, threshold_val = 2):
     return dice
 
 
-def run_conjunction_analysis(threshold_val = 2, save=True):
+def run_conjunction_analysis(threshold_val=2, save=True, savetag=''):
     """
     Main conjunction analysis script. Loops through contrast files, quantifies overlap and dice coefficients, 
     and saves output to json. 
@@ -132,13 +132,13 @@ def run_conjunction_analysis(threshold_val = 2, save=True):
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
         if not os.path.isdir(OUTPATH):
             os.mkdir(OUTPATH)
-        with open(OUTPATH + 'results.json', 'w') as file:
+        with open(OUTPATH + f'results_{savetag}.json', 'w') as file:
             json.dump(results, file, indent=4)
 
     return results
 
 
-def plot_results(results, save=True, savetag = ''):
+def plot_results(results, save=True, savetag=''):
     tasks = list(results.keys())
     fig, axes = plt.subplots(2,1, figsize=(8, 8))
     
