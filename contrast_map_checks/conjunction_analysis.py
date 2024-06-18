@@ -190,7 +190,7 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
 
             # now we have contrast maps that are both transformed and untransformed, and just need to quantify overlap for both
             # to do so we will get the average dice coefficient between every possible pair of maps
-            pairs = itertools.combinations(range(len(sub_list)), 2)
+            pairs = [p for p in itertools.combinations(range(len(sub_list)), 2)]
             results[task]['no_srm']['dice'].append(
                 [dice_coef(contrast_maps[i], contrast_maps[j], threshold_val = threshold_val) for i,j in pairs]
             )
@@ -206,7 +206,7 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
 
         # now, we want to average across the left-out subjects
         for method, measure in itertools.product(['srm','no_srm'], ['dice', 'r']):
-            results[task][method][measure] = np.mean(results[task][method][measure], axis=0) 
+            results[task][method][measure] = list(np.mean(results[task][method][measure], axis=0) )
 
     if save: 
         OUTPATH = '/scratch/users/csiyer/conjunction_analysis/'
