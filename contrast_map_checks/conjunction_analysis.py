@@ -166,12 +166,14 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
     results = {} 
     
     for task in ['flanker','spatialTS','cuedTS','directedForgetting','stopSignal','goNogo', 'shapeMatching', 'nBack']:
+        print(f'starting {task}')
         results[task] = {
             'srm': {'r': [], 'dice': []}, 
             'no_srm': {'r': [], 'dice': []}
         }
 
         for loso_idx,loso_sub in enumerate(sub_files.keys()): # leave one subject out of shared model creation, transform maps into their native space
+            print(f'loso round {loso_idx+1} of {len(sub_list)}')
 
             sub_list = list(sub_files.keys())
             data_list = [np.load(v['connectome']) for s,v in sub_files.items()]
@@ -209,6 +211,7 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
             os.mkdir(OUTPATH)
         with open(OUTPATH + f'results_{savetag}.json', 'w') as file:
             json.dump(results, file, indent=4)
+        print('saved results!')
 
     return results
 
@@ -249,6 +252,7 @@ def plot_results(results, save=True, savetag=''):
         plt.savefig(f'/scratch/users/csiyer/conjunction_analysis/results_{savetag}.png')
     else:
         plt.show()
+    print('finished plotting!')
 
 
 if __name__ == '__main__':
