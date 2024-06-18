@@ -17,7 +17,7 @@ import numpy as np
 import scipy
 from joblib import Parallel, delayed
 
-from brainiak.funcalign.srm import DetSRM
+from utils.srm_brainiak import DetSRM
 from sklearn.base import BaseEstimator, TransformerMixin
 from sklearn.exceptions import NotFittedError
 import uuid
