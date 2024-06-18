@@ -93,13 +93,13 @@ def compute_loso_srm(data_list, sub_list, loso_sub, parcel_map, n_features=100, 
     temp_dir = '/scratch/users/csiyer/temp_dir'
 
     def single_parcel_srm(train_data, loso_data, parcel_map, parcel_label, n_features):
-        parcel_idxs = np.where(parcel_map == parcel_label)
+        parcel_idxs = np.where(parcel_map == parcel_label)[0]
         train_data_parcel = [d[parcel_idxs] for d in train_data]
         srm = FastSRM(n_components=n_features, n_iter=20, n_jobs=1, aggregate='mean', temp_dir = temp_dir)
         reduced_sr = srm.fit_transform(train_data_parcel)
         srm.aggregate = None
-        srm.add_subjects([loso_data], reduced_sr)
-        return [np.load(x) for x in srm.basis_list], parcel_idxs # return list of all the transforms, which are saved to temp_dir
+        srm.add_subjects([loso_data[parcel_idxs]], reduced_sr)
+        return [np.load(x).T for x in srm.basis_list], parcel_idxs # return list of all the transforms (transpose of basis), which are saved to temp_dir
 
     srm_outputs = Parallel(n_jobs=-1)(
         delayed(single_parcel_srm)(train_data, loso_data, parcel_map, parcel_label, n_features) for parcel_label in np.sort(np.unique(parcel_map))
