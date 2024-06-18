@@ -173,7 +173,7 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
         }
 
         for loso_idx,loso_sub in enumerate(sub_files.keys()): # leave one subject out of shared model creation, transform maps into their native space
-            print(f'loso round {loso_idx+1} of {len(sub_list)}')
+            print(f'loso round {loso_idx+1} of {len(sub_files.keys())}')
 
             sub_list = list(sub_files.keys())
             data_list = [np.load(v['connectome']) for s,v in sub_files.items()]
