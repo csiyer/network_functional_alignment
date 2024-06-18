@@ -99,16 +99,16 @@ def compute_loso_srm(data_list, sub_list, loso_sub, parcel_map, n_features=100, 
         reduced_sr = srm.fit_transform(train_data_parcel)
         srm.aggregate = None
         srm.add_subjects([loso_data], reduced_sr)
-        return [np.load(x) for x in srm.basis_list], parcel_idx # return list of all the transforms, which are saved to temp_dir
+        return [np.load(x) for x in srm.basis_list], parcel_idxs # return list of all the transforms, which are saved to temp_dir
 
     srm_outputs = Parallel(n_jobs=-1)(
         delayed(single_parcel_srm)(train_data, loso_data, parcel_map, parcel_label, n_features) for parcel_label in np.sort(np.unique(parcel_map))
     )
 
     subject_transforms = [np.zeros((len(parcel_map), n_features)) for _ in range(len(sub_list))] # empty initalize
-    for sub_weights, parcel_idx in srm_outputs: # for each parcel
+    for sub_weights, parcel_idxs in srm_outputs: # for each parcel
         for i,sub in enumerate(subject_transforms): # for each subject
-            sub[parcel_idx,:] = sub_weights[i] # add those parcel's transformation values to that subject's transformation matrix
+            sub[parcel_idxs,:] = sub_weights[i] # add those parcel's transformation values to that subject's transformation matrix
 
     # we need to reorder them to match the original sub_list. the loso_sub's transform is at the end, and we'll insert it at its original index
     subject_transforms.insert(loso_idx, subject_transforms.pop())
@@ -171,8 +171,8 @@ def run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, sav
 
         for loso_idx,loso_sub in enumerate(sub_files.keys()): # leave one subject out of shared model creation, transform maps into their native space
 
-            sub_list = [s for s in sub_files.keys() if s != loso_sub]
-            data_list = [np.load(v['connectome']) for s,v in sub_files.items() if s != loso_sub]
+            sub_list = list(sub_files.keys())
+            data_list = [np.load(v['connectome']) for s,v in sub_files.items()]
 
             sub_transforms = compute_loso_srm(data_list, sub_list, loso_sub, parcel_map, n_features=srm_n_features, save=save)
             contrast_maps = [mask(sub_files[s][task]) for s in sub_list]
