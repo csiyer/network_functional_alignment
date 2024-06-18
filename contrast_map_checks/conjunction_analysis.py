@@ -84,7 +84,10 @@ def compute_loso_srm(data_list, sub_list, loso_sub, parcel_map, n_features=100, 
     """
     outpath = os.path.join('/scratch/users/csiyer/srm_outputs/', f'loso/{loso_sub}')
     if os.path.exists(outpath): # if this script has been run before, we can load past results instead of re-deriving
-        return [np.load(glob.glob(f'{outpath}/sub-{sub}_srm_transform_loso-{loso_sub}.npy')[0]) for sub in sub_list]
+        try:
+            return [np.load(glob.glob(f'{outpath}/sub-{sub}_srm_transform_loso-{loso_sub}.npy')[0]) for sub in sub_list]
+        except:
+            pass
     else:
         os.makedirs(outpath)
 
