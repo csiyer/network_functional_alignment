@@ -3,10 +3,16 @@ The decoding analysis is one way to quantify whether SRM seems to be picking up 
 in neural data during these control tasks. Another way to do this is to analyze GLM-derived subject-level 
 contrasts directly, rather than trial-level decoding.
 
-Here, we align each subject's GLM-derived contrast maps into shared space using the SRM transforms,
-and compare across-subject alignment, in 2 ways:
-    1) # of overlapping voxels in thresholded maps (SRM-transformed vs. not)
-    2) Dice coefficient of unthresholded maps (SRM-transformed vs. not)
+This script transforms GLM-derived contrast maps into one target subject's native space, and compares their
+across-subject overlap to that of non-transformed contrast maps. 
+
+Because of concerns about data leakage when using target subjects, this script re-derives SRM matrices 
+excluding one subject, adds the left-out subject to the shared model,
+and then transforms each subject's maps into the left-out subject's native space.
+
+Finally, overlap is quantified by ____?
+
+https://github.com/neurodatascience/fmralign-benchmark/blob/5e06751a2dfab7d8c0494dabce32a2e0aac31615/experiments/experiment_3.py
 
 Author: Chris Iyer
 Updated: 6/5/2024
@@ -17,10 +23,12 @@ import numpy as np
 from scipy.stats import pearsonr
 import matplotlib.pyplot as plt
 from nilearn.maskers import NiftiMasker
+from utils import srm_brainiak as srm
+from joblib import Parallel, delayed
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from connectivity import get_combined_mask
-
+from srm import load_avg_connectomes, load_parcel_map
 
 CONTRAST_PATH = '/oak/stanford/groups/russpold/data/network_grant/discovery_BIDS_21.0.1/derivatives/output_optcom_MNI/'
 SRM_DIR = '/scratch/users/csiyer/srm_outputs/'
