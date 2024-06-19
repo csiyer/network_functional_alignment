@@ -58,7 +58,7 @@ def compute_srms(data_list, sub_list, parcel_map, n_features=50, n_iter=20, save
             is less clear in the case of connectivity SRMs than traditional response SRMs, so we likely will ignore it--but saving it nonetheless.
     """
     def single_parcel_srm(data_list, parcel_map, parcel_label, n_features):
-        parcel_idx = np.where(parcel_map == parcel_label)
+        parcel_idx = np.where(parcel_map == parcel_label)[0]
         data_parcel = [d[parcel_idx] for d in data_list]
         shared_model = srm.SRM(n_iter=20, features=n_features) 
         shared_model.fit(data_parcel)

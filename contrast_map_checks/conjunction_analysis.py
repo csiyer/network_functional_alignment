@@ -259,6 +259,7 @@ def plot_results(results, save=True, savetag=''):
 
 
 if __name__ == '__main__':
-    results = run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, savetag = 'loso_version')
-    plot_results(results)
+    savetag = 'loso_version'
+    results = run_conjunction_analysis(srm_n_features=100, threshold_val=2, save=True, savetag = savetag)
+    plot_results(results, savetag = savetag)
     
